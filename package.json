@@ -1,0 +1,41 @@
+{
+    "name": "matix-skype-bridge",
+    "version": "1.0.0",
+    "description": "Matrix<->Skype user-puppeting portal",
+    "main": "index.js",
+    "scripts": {
+        "lint": "eslint .",
+        "test": "echo \"Error: no test specified\" && exit 1"
+    },
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/grigori-gru/matix-skype-bridge.git"
+    },
+    "keywords": [
+        "Skype",
+        "Matrix",
+        "Bridge"
+    ],
+    "author": "grigori-gru",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/grigori-gru/matix-skype-bridge/issues"
+    },
+    "homepage": "https://github.com/grigori-gru/matix-skype-bridge#readme",
+    "dependencies": {
+        "matrix-appservice-bridge": "*"
+    },
+    "devDependencies": {
+        "chai": "*",
+        "chai-http": "*",
+        "eslint": "*",
+        "eslint-config-google": "*",
+        "mocha": "*",
+        "nock": "*",
+        "nyc": "*",
+        "proxyquire": "*",
+        "sinon": "*",
+        "winston": "^2.4.0",
+        "winston-daily-rotate-file": "^1.7.2"
+    }
+}
