@@ -1,15 +1,14 @@
-const Promise = require('bluebird');
 const concatStream = require('concat-stream');
 const needle = require('needle');
 const mime = require('mime-types');
 const urlParse = require('url').parse;
 const fetch = require('node-fetch');
 const querystring = require('querystring');
-const debug = require('debug')('utils');
-
-const Entities = require('html-entities').AllHtmlEntities;
+const {AllHtmlEntities: Entities} = require('html-entities');
 const entities = new Entities();
-const {bridge, puppet, SKYPE_USERS_TO_IGNORE} = process.env.NODE_ENV === 'test' ? require('../test/fixtures/config.json') : require('../config.json');
+
+const log = require('./modules/log')(module);
+const {bridge, puppet, SKYPE_USERS_TO_IGNORE} = require('./config.js');
 
 const a2b = str => new Buffer(str).toString('base64');
 const b2a = str => new Buffer(str, 'base64').toString('ascii');
@@ -26,7 +25,7 @@ const setRoomAlias = (roomId, alias) => {
         headers: {'Content-Type': 'application/json'},
     })
         .then(res => {
-            debug('Request for setting alias name %s for room %s in matrix have status %s ', alias, roomId, res.status);
+            log.debug('Request for setting alias name %s for room %s in matrix have status %s ', alias, roomId, res.status);
         });
 };
 
@@ -44,7 +43,7 @@ const getNameToSkype = sender =>
     getDisplayName(sender)
         .then(displayname => {
             const result = displayname || sender;
-            debug('Display name for user %s in skype is %s', sender, result);
+            log.debug('Display name for user %s in skype is %s', sender, result);
             return result;
         });
 
@@ -55,7 +54,7 @@ const getRoomName = roomId => {
         .then(res => res.json())
         .then(({name}) => {
             const result = name || 'Bingo-boom conversation';
-            debug('Display name for roomId %s in skype is %s', roomId, result);
+            log.debug('Display name for roomId %s in skype is %s', roomId, result);
             return result;
         });
 };
