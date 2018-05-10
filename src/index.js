@@ -1,14 +1,14 @@
 const {Bridge} = require('matrix-appservice-bridge');
 const path = require('path');
 
-const config = require('./config');
-const skypeEventHandler = require('./skype-handler');
-const matrixEventHandler = require('./skype/matrix-handler');
 const log = require('./modules/log')(module);
-const skypeConnect = require('./skype/connect');
+const config = require('./config');
+const skypeEventHandler = require('./lib/skype-handler');
+const matrixEventHandler = require('./lib/matrix-handler');
+const skypeConnect = require('./lib/skype-lib/connect');
 const Puppet = require('./puppet');
-const puppet = new Puppet(path.join(__dirname, './config.json'));
 
+const puppet = new Puppet(path.join(__dirname, './config.json'));
 
 module.exports = async () => {
     log.info('starting matrix client');
@@ -22,7 +22,7 @@ module.exports = async () => {
             // auto provision users w no additional data
             return {};
         },
-        onEvent: matrixEventHandler({puppet, skypeClient}),
+        onEvent: matrixEventHandler({puppet, skypeClient, bridge}),
         onAliasQuery: () => {
             log.info('on alias query');
         },

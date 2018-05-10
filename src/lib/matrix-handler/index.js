@@ -1,4 +1,4 @@
-const log = require('../modules/log')(module);
+const log = require('../../modules/log')(module);
 const handlers = require('./handlers');
 
 module.exports = state => (req, _context) => {

@@ -1,7 +1,7 @@
-const clientData = require('./skype/client');
-const {deskypeify} = require('./skype/skypeify');
-const {getMatrixUsers} = require('./utils');
-const log = require('./modules/log')(module);
+const clientData = require('../skype-lib/client');
+const {deskypeify} = require('../skype-lib/skypeify');
+const {getMatrixUsers} = require('../../utils');
+const log = require('../../modules/log')(module);
 const mainLib = require('./main-lib');
 
 module.exports = state => {

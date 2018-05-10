@@ -1,10 +1,11 @@
-const log = require('./modules/log')(module);
-const config = require('./config.js');
-const {autoTagger, isFilenameTagged, download} = require('./utils');
 const path = require('path');
 const fs = require('fs');
 const {RemoteUser} = require('matrix-appservice-bridge');
-const clientData = require('./skype/client');
+
+const log = require('../../modules/log')(module);
+const config = require('../../config');
+const {autoTagger, isFilenameTagged, download} = require('../../utils');
+const clientData = require('../skype-lib/client');
 
 const {
     getRoomAliasFromThirdPartyRoomId,
@@ -17,6 +18,7 @@ const {
 
 module.exports = state => {
     const {puppet, skypeClient, bridge} = state;
+
     const {
         getThirdPartyUserDataById,
         getThirdPartyRoomDataById,

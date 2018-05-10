@@ -1,5 +1,5 @@
 const skypeHttp = require('skype-http');
-const log = require('../modules/log')(module);
+const log = require('../../modules/log')(module);
 
 module.exports = async auth => {
     const opts = {

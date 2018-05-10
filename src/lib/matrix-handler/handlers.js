@@ -1,7 +1,8 @@
-const {a2b, b2a, setRoomAlias, getSkypeMatrixUsers, getRoomName} = require('./utils');
-const config = require('./config.js');
+const log = require('../../modules/log')(module);
+const {a2b, b2a, setRoomAlias, getSkypeMatrixUsers, getRoomName} = require('../../utils');
+const config = require('../../config');
 const {domain} = config.bridge;
-const clientData = require('../skype/client');
+const clientData = require('../skype-lib/client');
 
 const {
     servicePrefix,
@@ -10,7 +11,6 @@ const {
     getRoomAliasFromThirdPartyRoomId,
 } = config.clientData;
 
-const log = require('./modules/log')(module);
 
 module.exports = state => {
     const {puppet, bridge, skypeClient} = state;

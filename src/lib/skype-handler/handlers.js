@@ -1,5 +1,5 @@
-const log = require('./modules/log')(module);
-const {a2b} = require('./utils');
+const log = require('../../modules/log')(module);
+const {a2b} = require('../../utils');
 const lib = require('./lib');
 
 module.exports = state => {

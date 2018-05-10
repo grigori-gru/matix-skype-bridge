@@ -1,5 +1,5 @@
 const striptags = require('striptags');
-const {entities} = require('../utils');
+const {entities} = require('../../utils');
 
 const replacer = (match, href) => `<a href="${href}">${href}</a>`;
 const regExpr = /(https?:\/\/(www\.)?[-a-zA-Z0-9@:%._\+~#=]{2,256}\.[a-z]{2,6}[-a-zA-Z0-9@:%_\+.~#?&//=]*)/gi;

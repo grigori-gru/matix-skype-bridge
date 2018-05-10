@@ -1,7 +1,7 @@
 const fs = require('fs');
 const tmp = require('tmp');
-const log = require('../modules/log')(module);
-const {getDisplayName, a2b, b2a, download, entities} = require('../utils');
+const log = require('../../modules/log')(module);
+const {getDisplayName, a2b, b2a, download, entities} = require('../../utils');
 const {deskypeify, skypeify} = require('./skypeify');
 
 const getThirdPartyUserDataByIdNoPromise = (api, thirdPartySender) => {
