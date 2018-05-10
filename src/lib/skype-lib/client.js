@@ -78,7 +78,13 @@ module.exports = api => {
                 });
                 resolve(null);
                 // eslint-disable-next-line no-return-await tmp
-            }).finally(async () => await deleteFile(imagePath));
+            }).finally(async () => {
+                try {
+                    await deleteFile(imagePath);
+                } catch (err) {
+                    return err;
+                }
+            });
         },
 
         getThirdPartyUserDataById: id => {
