@@ -22,6 +22,7 @@
 *.db
 /data
 /*.sqlite
+/tmp
 
 # Logs
 src/logs/log*.*

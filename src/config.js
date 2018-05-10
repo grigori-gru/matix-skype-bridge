@@ -33,4 +33,6 @@ const clientData = {
     allowNullSenderName,
 };
 
-module.exports = ({...config, clientData});
+const tmpPath = path.resolve(__dirname, '..', 'tmp');
+
+module.exports = ({...config, clientData, tmpPath});

@@ -1,5 +1,5 @@
 const {expect} = require('chai');
-const {skypeify, deskypeify, replacer} = require('../../../src/lib/skype-lib/skypeify');
+const {skypeify, deskypeify, replacer} = require('../../src/lib/skype-lib/skypeify');
 
 describe('Skypeify module testing', () => {
     it('Test replacer', () => {

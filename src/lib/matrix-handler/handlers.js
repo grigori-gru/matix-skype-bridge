@@ -114,7 +114,8 @@ module.exports = state => {
 
                 const url = puppet.getClient().mxcUrlToHttp(data.content.url);
                 promise = () => sendImageMessageAsPuppetToThirdPartyRoomWithId(thirdPartyRoomId, {
-                    url, text: tagMatrixMessage(body),
+                    url,
+                    text: tagMatrixMessage(body),
                     mimetype: data.content.log.debug.mimetype,
                     width: data.content.log.debug.w,
                     height: data.content.log.debug.h,

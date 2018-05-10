@@ -6,7 +6,7 @@
     "scripts": {
         "start": "node index.js",
         "lint": "eslint .",
-        "test": "NODE_ENV=test nyc mocha --exit"
+        "test": "NODE_ENV=test nyc mocha test/* --exit"
     },
     "repository": {
         "type": "git",

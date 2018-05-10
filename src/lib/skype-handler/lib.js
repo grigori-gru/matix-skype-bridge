@@ -6,7 +6,6 @@ const mainLib = require('./main-lib');
 
 module.exports = state => {
     const {
-        getConversation,
         downloadImage,
         getPayload,
     } = clientData(state.skypeClient);
@@ -21,7 +20,7 @@ module.exports = state => {
         inviteSkypeConversationMembers: (roomId, conversation) => {
             let matrixMembers;
 
-            return getConversation(conversation)
+            return state.skypeClient.getConversation(conversation)
                 .then(skypeRoom => {
                     const {members} = skypeRoom;
                     matrixMembers = getMatrixUsers(members);
