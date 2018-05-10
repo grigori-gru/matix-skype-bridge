@@ -1,9 +1,13 @@
 const fs = require('fs');
-const tmp = require('tmp');
+const util = require('util');
+const path = require('path');
+const Url = require('url');
 const log = require('../../modules/log')(module);
+const {tmpPath} = require('../../config');
 const {getDisplayName, a2b, b2a, download, entities} = require('../../utils');
 const {deskypeify, skypeify} = require('./skypeify');
 
+const deleteFile = util.promisify(fs.unlink);
 
 module.exports = api => {
     const getContact = id => api.contacts.find(contact =>
@@ -49,34 +53,32 @@ module.exports = api => {
                     textContent: skypeify(textWithSenderName),
                 })),
 
-        // TODO: try to change
-        sendImageMessageAsPuppetToThirdPartyRoomWithId: (id, data) => {
-            let cleanup = () => {};
-            return new Promise((resolve, reject) => {
-                tmp.file((err, path, fd, cleanupCallback) => {
+
+        sendImageMessageAsPuppetToThirdPartyRoomWithId: (id, {url, text}) => {
+            const {pathname} = Url.parse(url);
+            const splited = pathname.split(path.sep);
+            const fileName = splited[splited.length - 1];
+            const imagePath = path.resolve(tmpPath, fileName);
+
+            return new Promise(async (resolve, reject) => {
+                const tmpFile = fs.createWriteStream(imagePath);
+                const {buffer} = await download.getBufferAndType(url);
+                tmpFile.write(buffer, err => {
                     if (err) {
-                        reject(err);
+                        reject(`Error on write buffer to file ${imagePath}`, err);
+                        // eslint-disable-next-line no-useless-return
+                        return;
                     }
-                    cleanup = cleanupCallback;
-                    const tmpFile = fs.createWriteStream(path);
-                    download.getBufferAndType(data.url).then(({buffer, type}) => {
-                        tmpFile.write(buffer, err => {
-                            if (err) {
-                                reject(err);
-                                return;
-                            }
-                            tmpFile.close(() => {
-                                resolve(api.sendImage({
-                                    file: path,
-                                    name: data.text,
-                                }, b2a(id)));
-                            });
-                        });
-                    });
                 });
-            }).finally(() => {
-                cleanup();
-            });
+                tmpFile.end(() => {
+                    api.sendImage({
+                        file: imagePath,
+                        name: text,
+                    }, b2a(id));
+                });
+                resolve(null);
+                // eslint-disable-next-line no-return-await tmp
+            }).finally(async () => await deleteFile(imagePath));
         },
 
         getThirdPartyUserDataById: id => {
