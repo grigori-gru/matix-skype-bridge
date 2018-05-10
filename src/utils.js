@@ -10,6 +10,13 @@ const entities = new Entities();
 const log = require('./modules/log')(module);
 const {bridge, puppet, SKYPE_USERS_TO_IGNORE} = require('./config.js');
 
+const isSkypeId = id => id.includes(':');
+
+const getNameFromId = id => id.substr(id.indexOf(':') + 1);
+
+const getAvatarUrl = id =>
+    `https://avatars.skype.com/v1/avatars/${entities.encode(getNameFromId(id))}/public?returnDefaultImage=false&cacheHeaders=true`;
+
 const a2b = str => new Buffer(str).toString('base64');
 const b2a = str => new Buffer(str, 'base64').toString('ascii');
 const URL_BASE = `${bridge.homeserverUrl}/_matrix/client/r0`;
@@ -140,4 +147,7 @@ module.exports = {
         getBufferAndType: downloadGetBufferAndType,
     },
     entities,
+    getAvatarUrl,
+    getNameFromId,
+    isSkypeId,
 };

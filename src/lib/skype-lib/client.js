@@ -1,7 +1,7 @@
 const fs = require('fs');
 const tmp = require('tmp');
 const log = require('../../modules/log')(module);
-const {getDisplayName, a2b, b2a, download, entities} = require('../../utils');
+const {getDisplayName, a2b, b2a, download, getAvatarUrl, getNameFromId, isSkypeId} = require('../../utils');
 const {deskypeify, skypeify} = require('./skypeify');
 
 
@@ -9,19 +9,21 @@ module.exports = api => {
     const getContact = id => api.contacts.find(contact =>
         (contact.personId === id || contact.mri === id));
 
-    const getThirdPartyUserDataByIdNoPromise = (api, thirdPartySender) => {
-        const contact = getContact(thirdPartySender);
-        const payload = {};
+    const getSkypeOutputData = senderId => {
+        const contact = getContact(senderId);
+        const output = {};
+
         if (contact) {
-            payload.senderName = contact.displayName;
-            payload.avatarUrl = contact.profile.avatarUrl;
-        } else if (thirdPartySender.indexOf(':') > -1) {
-            payload.senderName = thirdPartySender.substr(thirdPartySender.indexOf(':') + 1);
-            payload.avatarUrl = `https://avatars.skype.com/v1/avatars/${entities.encode(payload.senderName)}/public?returnDefaultImage=false&cacheHeaders=true`;
+            output.senderName = contact.displayName;
+            output.avatarUrl = contact.profile.avatarUrl;
+        } else if (isSkypeId(senderId)) {
+            output.senderName = getNameFromId(senderId);
+            output.avatarUrl = getAvatarUrl(senderId);
         } else {
-            payload.senderName = thirdPartySender;
+            output.senderName = senderId;
         }
-        return payload;
+
+        return output;
     };
 
     return {
@@ -38,9 +40,10 @@ module.exports = api => {
                     api.setConversationTopic(id, topic)
                         .then(() => id)),
 
-        addMemberToConversation: (converstionId, memberId) => api.addMemberToConversation(converstionId, memberId),
 
         getSkypeBotId: () => `8:${api.context.username}`,
+
+        getThirdPartyUserDataById: id => getSkypeOutputData(b2a(id)),
 
         sendMessageAsPuppetToThirdPartyRoomWithId: (id, text, {sender}) =>
             getDisplayName(sender)
@@ -79,23 +82,14 @@ module.exports = api => {
             });
         },
 
-        getThirdPartyUserDataById: id => {
-            const raw = b2a(id);
-            return Promise.resolve(getThirdPartyUserDataByIdNoPromise(api, raw));
-        },
 
         getPayload: data => {
             const payload = {
                 roomId: data.roomId.replace(':', '^'),
             };
-            if (data.sender) {
-                payload.senderId = a2b(data.sender);
-                Object.assign(payload, getThirdPartyUserDataByIdNoPromise(api, data.sender));
-            } else {
-                payload.senderId = null;
-            }
-            log.debug(payload);
-            return payload;
+            return data.sender ?
+                {...payload, ...getSkypeOutputData(data.sender), senderId: a2b(data.sender)} :
+                {...payload, senderId: null};
         },
 
         getThirdPartyRoomDataById: id => {
@@ -122,7 +116,7 @@ module.exports = api => {
 
         testOnly: {
             getContact,
-            getThirdPartyUserDataByIdNoPromise,
+            getSkypeOutputData,
         },
     };
 };

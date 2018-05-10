@@ -19,7 +19,6 @@ module.exports = state => {
         createConversationWithTopic,
         sendMessageAsPuppetToThirdPartyRoomWithId,
         sendImageMessageAsPuppetToThirdPartyRoomWithId,
-        addMemberToConversation,
     } = clientData(state.skypeApi);
 
     const getThirdPartyRoomIdFromMatrixRoomId = matrixRoomId => {
@@ -38,7 +37,7 @@ module.exports = state => {
         const [skypeUser] = getSkypeMatrixUsers(skypeClient.contacts, [invitedUser]);
 
         if (skypeUser) {
-            return addMemberToConversation(skypeRoomId, skypeUser);
+            return skypeClient.addMemberToConversation(skypeRoomId, skypeUser);
         }
     };
 
@@ -95,39 +94,33 @@ module.exports = state => {
 
         handleMatrixMessageEvent: data => {
             const {room_id: roomId, content: {body, msgtype}} = data;
-
-            let promise;
-
             if (isTaggedMatrixMessage(body)) {
                 log.debug('ignoring tagged message, it was sent by the bridge');
                 return;
             }
+            try {
+                const thirdPartyRoomId = getThirdPartyRoomIdFromMatrixRoomId(roomId);
+                switch (msgtype) {
+                    case 'm.text': {
+                        const msg = tagMatrixMessage(body);
+                        log.debug('text message from riot');
+                        return sendMessageAsPuppetToThirdPartyRoomWithId(thirdPartyRoomId, msg, data);
+                    }
+                    case 'm.image': {
+                        log.debug('picture message from riot');
 
-            const thirdPartyRoomId = getThirdPartyRoomIdFromMatrixRoomId(roomId);
-
-            const msg = tagMatrixMessage(body);
-
-            if (msgtype === 'm.text') {
-                promise = () => sendMessageAsPuppetToThirdPartyRoomWithId(thirdPartyRoomId, msg, data);
-            } else if (msgtype === 'm.image') {
-                log.debug('picture message from riot');
-
-                const url = puppet.getClient().mxcUrlToHttp(data.content.url);
-                promise = () => sendImageMessageAsPuppetToThirdPartyRoomWithId(thirdPartyRoomId, {
-                    url,
-                    text: tagMatrixMessage(body),
-                    mimetype: data.content.log.debug.mimetype,
-                    width: data.content.log.debug.w,
-                    height: data.content.log.debug.h,
-                    size: data.content.log.debug.size,
-                }, data);
-            } else {
-                promise = () => Promise.reject(new Error('dont know how to handle this msgtype', msgtype));
-            }
-
-            return promise().catch(err => {
+                        const url = puppet.getClient().mxcUrlToHttp(data.content.url);
+                        return sendImageMessageAsPuppetToThirdPartyRoomWithId(thirdPartyRoomId, {
+                            url,
+                            text: tagMatrixMessage(body),
+                        }, data);
+                    }
+                    default:
+                        throw new Error('dont know how to handle this msgtype', msgtype);
+                }
+            } catch (err) {
                 log.error('handleMatrixMessageEvent', err);
-            });
+            }
         },
 
     }
