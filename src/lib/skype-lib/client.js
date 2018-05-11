@@ -1,16 +1,19 @@
-const fs = require('fs');
-const tmp = require('tmp');
+// const fs = require('fs');
+// const tmp = require('tmp');
 const log = require('../../modules/log')(module);
-const {getDisplayName, a2b, b2a, download, getAvatarUrl, getNameFromId, isSkypeId} = require('../../utils');
+const {getDisplayName, a2b, b2a, download, getAvatarUrl, getNameFromId, isSkypeId, getTextContent} = require('../../utils');
 const {deskypeify, skypeify} = require('./skypeify');
 
 
 module.exports = api => {
-    const getContact = id => api.contacts.find(contact =>
-        (contact.personId === id || contact.mri === id));
+    const getContact = async id => {
+        const contacts = await api.getContacts();
+        return contacts.find(contact =>
+            (contact.personId === id || contact.mri === id));
+    };
 
-    const getSkypeOutputData = senderId => {
-        const contact = getContact(senderId);
+    const getSkypeOutputData = async senderId => {
+        const contact = await getContact(senderId);
         const output = {};
 
         if (contact) {
@@ -45,73 +48,68 @@ module.exports = api => {
 
         getThirdPartyUserDataById: id => getSkypeOutputData(b2a(id)),
 
-        sendMessageAsPuppetToThirdPartyRoomWithId: (id, text, {sender}) =>
-            getDisplayName(sender)
-                .then(displayName => `${displayName}:\n${text}`)
-                .then(textWithSenderName => api.sendMessage(b2a(id), {
-                    textContent: skypeify(textWithSenderName),
-                })),
-
-        // TODO: try to change
-        sendImageMessageAsPuppetToThirdPartyRoomWithId: (id, data) => {
-            let cleanup = () => {};
-            return new Promise((resolve, reject) => {
-                tmp.file((err, path, fd, cleanupCallback) => {
-                    if (err) {
-                        reject(err);
-                    }
-                    cleanup = cleanupCallback;
-                    const tmpFile = fs.createWriteStream(path);
-                    download.getBufferAndType(data.url).then(({buffer, type}) => {
-                        tmpFile.write(buffer, err => {
-                            if (err) {
-                                reject(err);
-                                return;
-                            }
-                            tmpFile.close(() => {
-                                resolve(api.sendImage({
-                                    file: path,
-                                    name: data.text,
-                                }, b2a(id)));
-                            });
-                        });
-                    });
-                });
-            }).finally(() => {
-                cleanup();
-            });
+        sendTextToSkype: async (id, text, {sender}) => {
+            try {
+                const displayName = await getDisplayName(sender);
+                const textContent = skypeify(getTextContent(displayName, text));
+                await api.sendMessage(b2a(id), {textContent});
+            } catch (error) {
+                throw new Error(error);
+            }
         },
 
+        // TODO: try to change
+        // sendImageMessageAsPuppetToThirdPartyRoomWithId: (id, data) => {
+        //     let cleanup = () => {};
+        //     return new Promise((resolve, reject) => {
+        //         tmp.file((err, path, fd, cleanupCallback) => {
+        //             if (err) {
+        //                 reject(err);
+        //             }
+        //             cleanup = cleanupCallback;
+        //             const tmpFile = fs.createWriteStream(path);
+        //             download.getBufferAndType(data.url).then(({buffer, type}) => {
+        //                 tmpFile.write(buffer, err => {
+        //                     if (err) {
+        //                         reject(err);
+        //                         return;
+        //                     }
+        //                     tmpFile.close(() => {
+        //                         resolve(api.sendImage({
+        //                             file: path,
+        //                             name: data.text,
+        //                         }, b2a(id)));
+        //                     });
+        //                 });
+        //             });
+        //         });
+        //     }).finally(() => {
+        //         cleanup();
+        //     });
+        // },
 
-        getPayload: data => {
+
+        getPayload: async data => {
             const payload = {
                 roomId: data.roomId.replace(':', '^'),
             };
-            return data.sender ?
-                {...payload, ...getSkypeOutputData(data.sender), senderId: a2b(data.sender)} :
-                {...payload, senderId: null};
-        },
-
-        getThirdPartyRoomDataById: id => {
-            const raw = b2a(id);
-            const contact = api.contacts.find(contact =>
-                (contact.personId === raw || contact.mri === raw));
-            if (contact) {
-                return Promise.resolve({
-                    name: deskypeify(contact.displayName),
-                    topic: 'Skype Direct Message',
-                });
+            if (data.sender) {
+                const outputData = await getSkypeOutputData(data.sender);
+                return {...payload, ...outputData, senderId: a2b(data.sender)};
             }
-            return new Promise((resolve, reject) => {
-                api.getConversation(raw).then(res => {
-                    resolve({
-                        name: deskypeify(res.threadProperties.topic),
-                        topic: res.type.toLowerCase() === 'conversation' ? 'Skype Direct Message' : 'Skype Group Chat',
-                    });
-                }).catch(err => {
-                    reject(err);
-                });
-            });
+            return {...payload, senderId: null};
+        },
+        getSkypeRoomData: async id => {
+            try {
+                const skypeConversation = await api.getConversation(b2a(id));
+                log.debug(skypeConversation);
+                const topic = skypeConversation.type.toLowerCase() === 'conversation' ? 'Skype Direct Message' : 'Skype Group Chat';
+                const name = deskypeify(skypeConversation.threadProperties.topic) || topic;
+                log.debug('name', name);
+                return {name, topic};
+            } catch (err) {
+                throw new Error(err);
+            }
         },
 
         testOnly: {

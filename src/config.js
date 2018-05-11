@@ -1,7 +1,6 @@
 const path = require('path');
 
 const env = process.env.NODE_ENV || 'development';
-const log = require('./modules/log')(module);
 
 const configPath = {
     development: './',
@@ -9,7 +8,6 @@ const configPath = {
 };
 
 const confgigFilepath = path.resolve(configPath[env], 'config.json');
-log.debug(confgigFilepath);
 
 const config = require(confgigFilepath);
 

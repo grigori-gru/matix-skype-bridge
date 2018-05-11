@@ -10,6 +10,12 @@ const entities = new Entities();
 const log = require('./modules/log')(module);
 const {bridge, puppet, SKYPE_USERS_TO_IGNORE} = require('./config.js');
 
+const isTypeErrorMessage = err =>
+    ['ressource.messageType', 'EventMessage.resourceType'].reduce((acc, val) =>
+        acc || err.stack.includes(val), false);
+
+const getTextContent = (name, text) => `${name}:\n${text}`;
+
 const isSkypeId = id => id.includes(':');
 
 const getNameFromId = id => id.substr(id.indexOf(':') + 1);
@@ -130,6 +136,7 @@ const FILENAME_TAG_PATTERN = /^.+_mx_\..+$/;
 const isFilenameTagged = filepath => !!filepath.match(FILENAME_TAG_PATTERN);
 
 module.exports = {
+    getTextContent,
     isFilenameTagged,
     autoTagger,
     getDisplayName,
@@ -150,4 +157,5 @@ module.exports = {
     getAvatarUrl,
     getNameFromId,
     isSkypeId,
+    isTypeErrorMessage,
 };

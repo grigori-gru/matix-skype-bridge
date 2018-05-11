@@ -12,7 +12,8 @@ module.exports = async auth => {
         const api = await skypeHttp.connect(opts);
         await api.listen();
         log.debug('setting status online');
-        return api.setStatus('Online');
+        await api.setStatus('Online');
+        return api;
     } catch (err) {
         log.error(err);
         process.exit(0);

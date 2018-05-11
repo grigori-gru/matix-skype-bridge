@@ -3,7 +3,7 @@ const path = require('path');
 
 const log = require('./modules/log')(module);
 const config = require('./config');
-const skypeEventHandler = require('./lib/skype-handler');
+const {skypeEventHandler, skypeErrorHandler} = require('./lib/skype-handler');
 const matrixEventHandler = require('./lib/matrix-handler');
 const skypeConnect = require('./lib/skype-lib/connect');
 const Puppet = require('./puppet');
@@ -15,7 +15,7 @@ module.exports = async () => {
     await puppet.startClient();
 
     const skypeClient = await skypeConnect(config.skype);
-
+    let bridge;
     const controller = {
         onUserQuery: queriedUser => {
             log.info('got user query', queriedUser);
@@ -33,11 +33,10 @@ module.exports = async () => {
             getUser: () => log.info('get user'),
         },
     };
-    const bridge = new Bridge({...config.bridge, controller});
+    bridge = new Bridge({...config.bridge, controller});
 
-    bridge.run(config.port, config);
+    await bridge.run(config.port, config);
 
     skypeClient.on('event', skypeEventHandler({bridge, puppet, skypeClient}));
-    skypeClient.on('error', err =>
-        log.error('An error was detected:\n', err));
+    skypeClient.on('error', skypeErrorHandler);
 };

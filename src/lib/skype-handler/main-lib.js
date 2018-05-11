@@ -21,7 +21,7 @@ module.exports = state => {
 
     const {
         getThirdPartyUserDataById,
-        getThirdPartyRoomDataById,
+        getSkypeRoomData,
     } = clientData(skypeClient);
 
 
@@ -201,7 +201,7 @@ module.exports = state => {
             return roomId;
         }, _err => {
             log.debug('the room doesn\'t exist. we need to create it for the first time');
-            return Promise.resolve(getThirdPartyRoomDataById(thirdPartyRoomId)).then(thirdPartyRoomData => {
+            return Promise.resolve(getSkypeRoomData(thirdPartyRoomId)).then(thirdPartyRoomData => {
                 log.debug('got 3p room data', thirdPartyRoomData);
                 const {name, topic} = thirdPartyRoomData;
                 log.debug('creating room !!!!', `>>>>${roomAliasName}<<<<`, name, topic);

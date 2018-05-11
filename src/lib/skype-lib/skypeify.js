@@ -15,7 +15,10 @@ const skypeify = str =>
     REPLACEMENTS.reduce((newStr, item) =>
         newStr.replace(...item), str);
 
-const deskypeify = function(str) {
+const deskypeify = str => {
+    if (!str) {
+        return str;
+    }
     const edit = str.match(/<e_m[^>]*>\s*$/i) !== null || str.match(/<e_m[^>]*>\s*<[^>]*e_m[^>]*>\s*$/i) !== null;
     const result = entities.decode(striptags(str));
     /* istanbul ignore next */

@@ -17,26 +17,25 @@ module.exports = class Puppet {
      *
      * @returns {Promise} Returns a promise resolving the MatrixClient
      */
-    startClient() {
-        return matrixSdk.createClient({
+    async startClient() {
+        const _matrixClient = await matrixSdk.createClient({
             baseUrl: config.bridge.homeserverUrl,
             userId: config.puppet.id,
             accessToken: config.puppet.token,
-        }).then(_matrixClient => {
-            this.client = _matrixClient;
-            this.client.startClient();
-            return new Promise((resolve, _reject) => {
-                this.matrixRoomMembers = {};
-                this.client.on('RoomState.members', (event, state, _member) => {
-                    this.matrixRoomMembers[state.roomId] = Object.keys(state.members);
-                });
+        });
+        this.client = _matrixClient;
+        this.client.startClient();
+        return new Promise((resolve, _reject) => {
+            this.matrixRoomMembers = {};
+            this.client.on('RoomState.members', (event, state, _member) => {
+                this.matrixRoomMembers[state.roomId] = Object.keys(state.members);
+            });
 
-                this.client.on('sync', state => {
-                    if (state === 'PREPARED') {
-                        log.info('synced');
-                        resolve();
-                    }
-                });
+            this.client.on('sync', state => {
+                if (state === 'PREPARED') {
+                    log.info('synced');
+                    resolve();
+                }
             });
         });
     }

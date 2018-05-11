@@ -4,17 +4,17 @@ const lib = require('./lib');
 
 module.exports = state => {
     const {
-        handleSkypeMessage,
-        handleSkypeImage,
-        inviteSkypeConversationMembers,
+        handleSentEvent,
+        handleMessageEvent,
+        handleImageEvent,
     } = lib(state);
 
     return {
         sentHandler: data => {
-            log.debug('sent', data);
+            log.debug('sent event data in skype', data);
             const {type, conversation, content} = data;
             const roomId = a2b(conversation);
-            return handleSkypeMessage({
+            return handleSentEvent({
                 type,
                 roomId,
                 sender: null,
@@ -23,7 +23,7 @@ module.exports = state => {
         },
 
         messageHandler: data => {
-            log.debug('message', data);
+            log.debug('message event data in skype', data);
             const {
                 type,
                 from: {raw},
@@ -32,19 +32,17 @@ module.exports = state => {
             } = data;
             const roomId = a2b(conversation);
 
-            return handleSkypeMessage({
+            return handleMessageEvent({
                 type,
                 roomId,
                 sender: raw,
                 content,
-            })
-                .then(() =>
-                    inviteSkypeConversationMembers(roomId, conversation))
-                .catch(err =>
-                    log.error('Error in skype message event', err));
+                conversation,
+            });
         },
 
         imageHandler: data => {
+            log.debug('image event data in skype', data);
             const {
                 type,
                 from: {raw},
@@ -52,7 +50,7 @@ module.exports = state => {
                 uri,
                 original_file_name: name,
             } = data;
-            return handleSkypeImage({
+            return handleImageEvent({
                 type,
                 roomId: a2b(conversation),
                 sender: raw,

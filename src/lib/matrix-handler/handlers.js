@@ -17,9 +17,9 @@ module.exports = state => {
 
     const {
         createConversationWithTopic,
-        sendMessageAsPuppetToThirdPartyRoomWithId,
+        sendTextToSkype,
         sendImageMessageAsPuppetToThirdPartyRoomWithId,
-    } = clientData(state.skypeApi);
+    } = clientData(state.skypeClient);
 
     const getThirdPartyRoomIdFromMatrixRoomId = matrixRoomId => {
         const patt = new RegExp(`^#${servicePrefix}_(.+)$`);
@@ -32,9 +32,10 @@ module.exports = state => {
         }, null);
     };
 
-    const invitePuppetUserToSkypeConversation = (invitedUser, matrixRoomId) => {
+    const invitePuppetUserToSkypeConversation = async (invitedUser, matrixRoomId) => {
         const skypeRoomId = b2a(getThirdPartyRoomIdFromMatrixRoomId(matrixRoomId));
-        const [skypeUser] = getSkypeMatrixUsers(skypeClient.contacts, [invitedUser]);
+        const contacts = await skypeClient.getContacts();
+        const [skypeUser] = getSkypeMatrixUsers(contacts, [invitedUser]);
 
         if (skypeUser) {
             return skypeClient.addMemberToConversation(skypeRoomId, skypeUser);
@@ -58,9 +59,10 @@ module.exports = state => {
                         .catch(err =>
                             log.error(err));
                 }
-                const onRoomNameAndUserCollection = (usersCollection, roomName) => {
+                const onRoomNameAndUserCollection = async (usersCollection, roomName) => {
                     const users = Object.keys(usersCollection);
-                    const skypeMatrixUsers = getSkypeMatrixUsers(skypeClient.contacts, users);
+                    const contacts = await skypeClient.getContacts();
+                    const skypeMatrixUsers = getSkypeMatrixUsers(contacts, users);
                     const allUsers = {users: skypeMatrixUsers, admins: [skypeClient.getSkypeBotId()]};
                     return createConversationWithTopic({topic: roomName, allUsers});
                 };
@@ -104,7 +106,7 @@ module.exports = state => {
                     case 'm.text': {
                         const msg = tagMatrixMessage(body);
                         log.debug('text message from riot');
-                        return sendMessageAsPuppetToThirdPartyRoomWithId(thirdPartyRoomId, msg, data);
+                        return sendTextToSkype(thirdPartyRoomId, msg, data);
                     }
                     case 'm.image': {
                         log.debug('picture message from riot');
