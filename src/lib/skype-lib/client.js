@@ -51,10 +51,7 @@ module.exports = api => {
 
         sendImageMessageAsPuppetToThirdPartyRoomWithId: async (id, {url, text}) => {
             try {
-                const {err, path, cleanup} = await tmp.file();
-                if (err) {
-                    throw new Error(err);
-                }
+                const {path, cleanup} = await tmp.file();
                 const tmpFile = fs.createWriteStream(path);
                 const {buffer} = await download.getBufferAndType(url);
                 tmpFile.write(buffer, err => {
