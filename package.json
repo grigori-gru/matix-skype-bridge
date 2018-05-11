@@ -6,7 +6,7 @@
     "scripts": {
         "start": "node index.js",
         "lint": "eslint .",
-        "test": "NODE_ENV=test nyc mocha test/* --exit"
+        "test": "NODE_ENV=test nyc mocha test/skype-lib/client.test.js --exit"
     },
     "repository": {
         "type": "git",
@@ -24,15 +24,16 @@
     },
     "homepage": "https://github.com/grigori-gru/matix-skype-bridge#readme",
     "dependencies": {
-        "readline-sync": "*",
-        "matrix-appservice-bridge": "*",
         "concat-stream": "^1.6.0",
         "html-entities": "^1.2.1",
+        "matrix-appservice-bridge": "*",
         "mime-types": "^2.1.14",
         "needle": "^1.4.5",
         "node-fetch": "^1.7.3",
+        "readline-sync": "*",
         "skype-http": "0.0.15",
         "striptags": "^3.0.1",
+        "tmp-promise": "^1.0.4",
         "winston": "^2.4.0",
         "winston-daily-rotate-file": "^1.7.2"
     },

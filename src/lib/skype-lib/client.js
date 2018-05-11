@@ -1,9 +1,8 @@
 const fs = require('fs');
-const tmp = require('tmp');
+const tmp = require('tmp-promise');
 const log = require('../../modules/log')(module);
 const {getDisplayName, a2b, b2a, download, entities} = require('../../utils');
 const {deskypeify, skypeify} = require('./skypeify');
-
 
 module.exports = api => {
     const getContact = id => api.contacts.find(contact =>
@@ -49,34 +48,30 @@ module.exports = api => {
                     textContent: skypeify(textWithSenderName),
                 })),
 
-        // TODO: try to change
-        sendImageMessageAsPuppetToThirdPartyRoomWithId: (id, data) => {
-            let cleanup = () => {};
-            return new Promise((resolve, reject) => {
-                tmp.file((err, path, fd, cleanupCallback) => {
+
+        sendImageMessageAsPuppetToThirdPartyRoomWithId: async (id, {url, text}) => {
+            try {
+                const {err, path, cleanup} = await tmp.file();
+                if (err) {
+                    throw new Error(err);
+                }
+                const tmpFile = fs.createWriteStream(path);
+                const {buffer} = await download.getBufferAndType(url);
+                tmpFile.write(buffer, err => {
                     if (err) {
-                        reject(err);
+                        throw new Error(err);
                     }
-                    cleanup = cleanupCallback;
-                    const tmpFile = fs.createWriteStream(path);
-                    download.getBufferAndType(data.url).then(({buffer, type}) => {
-                        tmpFile.write(buffer, err => {
-                            if (err) {
-                                reject(err);
-                                return;
-                            }
-                            tmpFile.close(() => {
-                                resolve(api.sendImage({
-                                    file: path,
-                                    name: data.text,
-                                }, b2a(id)));
-                            });
-                        });
+                    tmpFile.end(() => {
+                        api.sendImage({
+                            file: path,
+                            name: text,
+                        }, b2a(id));
                     });
                 });
-            }).finally(() => {
                 cleanup();
-            });
+            } catch (err) {
+                return err;
+            }
         },
 
         getThirdPartyUserDataById: id => {

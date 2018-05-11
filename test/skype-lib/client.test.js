@@ -37,14 +37,14 @@ describe('Client testing', () => {
             url: 'http://testUrl',
         };
 
-        await sendImageMessageAsPuppetToThirdPartyRoomWithId(id, data);
+        sendImageMessageAsPuppetToThirdPartyRoomWithId(id, data);
 
         const expectedMessage = {
             file: config.tmpPath,
             name: data.text,
         };
         const expectedConversationId = b2a(id);
-        const files = await fs.readdir(config.tmpPath);
+        const files = fs.readdirSync(config.tmpPath);
 
         expect(sendImageStub).to.be.calledWithExactly(expectedMessage, expectedConversationId);
         expect(files).to.be.empty;
