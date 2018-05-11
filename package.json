@@ -6,7 +6,7 @@
     "scripts": {
         "start": "node index.js",
         "lint": "eslint .",
-        "test": "NODE_ENV=test nyc mocha test/skype-lib/client.test.js --exit"
+        "test": "NODE_ENV=test nyc mocha test/* --exit"
     },
     "repository": {
         "type": "git",
