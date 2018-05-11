@@ -4,9 +4,9 @@ const sinonChai = require('sinon-chai');
 const {expect} = chai;
 chai.use(sinonChai);
 const proxyquire = require('proxyquire');
-const config = require('../../src/config.js');
+// const config = require('../../src/config.js');
 const {a2b, b2a, getNameFromId, getAvatarUrl, getTextContent} = require('../../src/utils');
-const fs = require('fs');
+// const fs = require('fs');
 const writeFileStub = stub();
 const {skypeify} = require('../../src/lib/skype-lib/skypeify');
 
@@ -193,25 +193,25 @@ describe('Client testing', () => {
         });
     });
 
-    it('expect sendImageMessageAsPuppetToThirdPartyRoomWithId to send image and not to have data in config.tmp dir', async () => {
-        const id = a2b('8:live:abcd');
-        const data = {
-            text: 'text',
-            url: 'http://testUrl',
-        };
+    // it('expect sendImageMessageAsPuppetToThirdPartyRoomWithId to send image and not to have data in config.tmp dir', async () => {
+    //     const id = a2b('8:live:abcd');
+    //     const data = {
+    //         text: 'text',
+    //         url: 'http://testUrl',
+    //     };
 
-        await sendImageMessageAsPuppetToThirdPartyRoomWithId(id, data);
+    //     await sendImageMessageAsPuppetToThirdPartyRoomWithId(id, data);
 
-        const expectedMessage = {
-            file: config.tmpPath,
-            name: data.text,
-        };
-        const expectedConversationId = b2a(id);
-        const files = fs.readdirSync(config.tmpPath);
-        expect(writeFileStub).not.to.be.called;
-        expect(sendImageStub).to.be.calledWithExactly(expectedMessage, expectedConversationId);
-        expect(files).to.be.empty;
-    });
+    //     const expectedMessage = {
+    //         file: config.tmpPath,
+    //         name: data.text,
+    //     };
+    //     const expectedConversationId = b2a(id);
+    //     const files = fs.readdirSync(config.tmpPath);
+    //     expect(writeFileStub).not.to.be.called;
+    //     expect(sendImageStub).to.be.calledWithExactly(expectedMessage, expectedConversationId);
+    //     expect(files).to.be.empty;
+    // });
 
     describe('sendTextToSkype test', () => {
         it('expect sendTextToSkype returns the same name and topic if no topic has no conversation', async () => {
