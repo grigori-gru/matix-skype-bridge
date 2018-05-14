@@ -6,9 +6,9 @@ const fetch = require('node-fetch');
 const querystring = require('querystring');
 const {AllHtmlEntities: Entities} = require('html-entities');
 const entities = new Entities();
-
 const log = require('./modules/log')(module);
-const {bridge, puppet, SKYPE_USERS_TO_IGNORE} = require('./config.js');
+const {bridge, puppet, SKYPE_USERS_TO_IGNORE, URL_BASE, clientData} = require('./config.js');
+const {isTaggedMatrixMessage} = clientData;
 
 const isTypeErrorMessage = err =>
     ['ressource.messageType', 'EventMessage.resourceType'].reduce((acc, val) =>
@@ -20,12 +20,12 @@ const isSkypeId = id => id.includes(':');
 
 const getNameFromId = id => id.substr(id.indexOf(':') + 1);
 
-const getAvatarUrl = id =>
-    `https://avatars.skype.com/v1/avatars/${entities.encode(getNameFromId(id))}/public?returnDefaultImage=false&cacheHeaders=true`;
+const getAvatarUrl = id => `https://avatars.skype.com/v1/avatars/${entities.encode(getNameFromId(id))}/public?returnDefaultImage=false&cacheHeaders=true`;
 
 const a2b = str => new Buffer(str).toString('base64');
 const b2a = str => new Buffer(str, 'base64').toString('ascii');
-const URL_BASE = `${bridge.homeserverUrl}/_matrix/client/r0`;
+
+const getMatrixRoomAlias = skypeConverstaion => a2b(skypeConverstaion);
 
 const setRoomAlias = (roomId, alias) => {
     const encodeAlias = encodeURIComponent(alias);
@@ -135,6 +135,11 @@ const FILENAME_TAG_PATTERN = /^.+_mx_\..+$/;
 
 const isFilenameTagged = filepath => !!filepath.match(FILENAME_TAG_PATTERN);
 
+const isMatrixMessage = ({senderId}, text) =>
+    (!senderId) && isTaggedMatrixMessage(text);
+const isMatrixImage = ({text, path}) =>
+    (isTaggedMatrixMessage(text) || isFilenameTagged(path));
+
 module.exports = {
     getTextContent,
     isFilenameTagged,
@@ -158,4 +163,7 @@ module.exports = {
     getNameFromId,
     isSkypeId,
     isTypeErrorMessage,
+    getMatrixRoomAlias,
+    isMatrixMessage,
+    isMatrixImage,
 };

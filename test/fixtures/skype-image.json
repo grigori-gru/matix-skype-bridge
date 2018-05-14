@@ -1,0 +1,46 @@
+{
+  "id": 1014,
+  "type": "EventMessage",
+  "resourceType": "NewMessage",
+  "time": "2018-05-14T09:44:45.000Z",
+  "resourceLink": "https://ch1-client-s.gateway.messenger.live.com/v1/users/ME/conversations/19:70e563f7ea0f4d2097adcabe5ba71d13@thread.skype/messages/1526291085663",
+  "resource": {
+    "type": "RichText/UriObject",
+    "id": "1526289732356",
+    "composeTime": "2018-05-14T09:22:11.359Z",
+    "arrivalTime": "2018-05-14T09:22:11.359Z",
+    "from": {
+      "raw": "8:live:gv_grudinin",
+      "prefix": 8,
+      "username": "live:gv_grudinin"
+    },
+    "conversation": "19:70e563f7ea0f4d2097adcabe5ba71d13@thread.skype",
+    "native": {
+      "ackrequired": "https://ch1-client-s.gateway.messenger.live.com/v1/users/ME/conversations/ALL/messages/1526289732356/ack",
+      "type": "Message",
+      "contenttype": "text",
+      "from": "https://ch1-client-s.gateway.messenger.live.com/v1/users/ME/contacts/8:live:gv_grudinin",
+      "clientmessageid": "5594450971162479003",
+      "version": "1526289732356",
+      "messagetype": "RichText/UriObject",
+      "counterpartymessageid": "1526289732356",
+      "imdisplayname": "gv_grudinin test",
+      "content": "<URIObject uri='https://api.asm.skype.com/v1/objects/0-weu-d9-d62a9d5f6dd2668928cd3aeed00d1848' url_thumbnail='https://api.asm.skype.com/v1/objects/0-weu-d9-d62a9d5f6dd2668928cd3aeed00d1848/views/imgt1_anim' type='Picture.1' width='761' height='618'>Чтобы просмотреть эту общую фотографию, перейдите к: <a href='https://login.skype.com/login/sso?go=xmmfallback?pic=0-weu-d9-d62a9d5f6dd2668928cd3aeed00d1848'>https://login.skype.com/login/sso?go=xmmfallback?pic=0-weu-d9-d62a9d5f6dd2668928cd3aeed00d1848</a><OriginalName v='photo_2018-05-04_09-05-04.jpg'></OriginalName><FileSize v='65014'></FileSize><meta type='photo' originalName='photo_2018-05-04_09-05-04.jpg'></meta></URIObject>",
+      "origincontextid": "0",
+      "originalarrivaltime": "2018-05-14T09:22:11.359Z",
+      "threadtopic": "321",
+      "isactive": true,
+      "conversationLink": "https://ch1-client-s.gateway.messenger.live.com/v1/users/ME/conversations/19:70e563f7ea0f4d2097adcabe5ba71d13@thread.skype",
+      "id": "1526289732356",
+      "amsreferences": [
+        "0-weu-d9-d62a9d5f6dd2668928cd3aeed00d1848"
+      ]
+    },
+    "uri_type": "Picture.1",
+    "uri": "https://api.asm.skype.com/v1/objects/0-weu-d9-d62a9d5f6dd2668928cd3aeed00d1848",
+    "uri_thumbnail": "https://api.asm.skype.com/v1/objects/0-weu-d9-d62a9d5f6dd2668928cd3aeed00d1848/views/imgt1_anim",
+    "uri_w_login": "https://login.skype.com/login/sso?go=xmmfallback?pic=0-weu-d9-d62a9d5f6dd2668928cd3aeed00d1848",
+    "file_size": 65014,
+    "original_file_name": "photo_2018-05-04_09-05-04.jpg"
+  }
+}

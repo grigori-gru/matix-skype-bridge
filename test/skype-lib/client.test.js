@@ -64,7 +64,7 @@ getContactsStub.resolves(skypeApiMock.contacts);
 
 const {
     sendTextToSkype,
-    sendImageMessageAsPuppetToThirdPartyRoomWithId,
+    // sendImageMessageAsPuppetToThirdPartyRoomWithId,
     getPayload,
     getSkypeRoomData,
     testOnly: {
@@ -113,10 +113,11 @@ describe('Client testing', () => {
     });
 
     describe('getPayload test', () => {
+        const conversation = 'someRoomName';
         it('expect getPayload returns sender id and "getSkypeOutputData" if data have sender', async () => {
             const sender = userIvan.personId;
             const data = {
-                roomId: 'someRoomName',
+                conversation,
                 content: 'content',
                 sender,
                 type: 'RichText',
@@ -124,7 +125,7 @@ describe('Client testing', () => {
             const result = await getPayload(data);
             const outputData = await getSkypeOutputData(data.sender);
             const expected = {
-                roomId: data.roomId,
+                roomId: a2b(conversation).replace(':', '^'),
                 senderId: a2b(data.sender),
                 ...outputData,
             };
@@ -132,14 +133,13 @@ describe('Client testing', () => {
         });
         it('expect getPayload returns senderid with null and no "getSkypeOutputData" if data have no sender or it\'s null', async () => {
             const data = {
-                roomId: 'someRoomName',
+                conversation,
                 content: 'content',
-                sender: null,
                 type: 'RichText',
             };
             const result = await getPayload(data);
             const expected = {
-                roomId: data.roomId,
+                roomId: a2b(conversation).replace(':', '^'),
                 senderId: null,
             };
             expect(result).to.be.deep.equal(expected);

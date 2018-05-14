@@ -124,6 +124,5 @@ module.exports = state => {
                 log.error('handleMatrixMessageEvent', err);
             }
         },
-
-    }
+    };
 };

@@ -18,8 +18,9 @@ const tagMatrixMessage = text => `${text}${deduplicationTag}`;
 const isTaggedMatrixMessage = text => deduplicationTagRegex.test(text);
 const servicePrefix = 'skype';
 const getRoomAliasLocalPartFromThirdPartyRoomId = id => `${servicePrefix}_${id}`;
-const getGhostUserFromThirdPartySenderId = id => `@${servicePrefix}_${id}:${config.domain}`;
-const getRoomAliasFromThirdPartyRoomId = id => `#${getRoomAliasLocalPartFromThirdPartyRoomId(id)}:${config.domain}`;
+const getGhostUserFromThirdPartySenderId = id => `@${servicePrefix}_${id}:${config.bridge.domain}`;
+const getRoomAliasFromThirdPartyRoomId = id =>
+    `#${getRoomAliasLocalPartFromThirdPartyRoomId(id)}:${config.bridge.domain}`;
 const allowNullSenderName = false;
 const clientData = {
     servicePrefix,
@@ -31,6 +32,8 @@ const clientData = {
     allowNullSenderName,
 };
 
+const URL_BASE = `${config.bridge.homeserverUrl}/_matrix/client/r0`;
+
 const tmpPath = path.resolve(__dirname, '..', 'tmp');
 
-module.exports = ({...config, clientData, tmpPath});
+module.exports = ({...config, clientData, tmpPath, URL_BASE});

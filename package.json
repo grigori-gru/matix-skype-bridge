@@ -37,15 +37,16 @@
         "winston-daily-rotate-file": "^1.7.2"
     },
     "devDependencies": {
-        "sinon-chai": "*",
         "chai": "*",
         "chai-http": "*",
         "eslint": "*",
         "eslint-config-google": "*",
+        "eslint-plugin-chai-friendly": "^0.4.1",
         "mocha": "*",
         "nock": "*",
         "nyc": "*",
         "proxyquire": "*",
-        "sinon": "*"
+        "sinon": "*",
+        "sinon-chai": "*"
     }
 }

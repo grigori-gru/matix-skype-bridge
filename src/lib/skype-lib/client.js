@@ -89,13 +89,14 @@ module.exports = api => {
         // },
 
 
-        getPayload: async data => {
+        getPayload: async ({conversation, sender}) => {
+            const roomId = a2b(conversation);
             const payload = {
-                roomId: data.roomId.replace(':', '^'),
+                roomId: roomId.replace(':', '^'),
             };
-            if (data.sender) {
-                const outputData = await getSkypeOutputData(data.sender);
-                return {...payload, ...outputData, senderId: a2b(data.sender)};
+            if (sender) {
+                const outputData = await getSkypeOutputData(sender);
+                return {...payload, ...outputData, senderId: a2b(sender)};
             }
             return {...payload, senderId: null};
         },

@@ -1,0 +1,40 @@
+{
+    "id": 1014,
+    "type": "EventMessage",
+    "resourceType": "NewMessage",
+    "time": "2018-05-14T09:44:45.000Z",
+    "resourceLink": "https://ch1-client-s.gateway.messenger.live.com/v1/users/ME/conversations/19:70e563f7ea0f4d2097adcabe5ba71d13@thread.skype/messages/1526291085663",
+    "resource": {
+        "type": "RichText",
+        "id": "1526289336144",
+        "composeTime": "2018-05-14T09:15:36.024Z",
+        "arrivalTime": "2018-05-14T09:15:36.024Z",
+        "from": {
+            "raw": "8:live:ignore_1",
+            "prefix": 8,
+            "username": "live:ignore_1"
+        },
+        "conversation": "19:70e563f7ea0f4d2097adcabe5ba71d13@thread.skype",
+        "native": {
+            "isactive": true,
+            "threadtopic": "321",
+            "messagetype": "RichText",
+            "conversationLink": "https: //ch1-client-s.gateway.messenger.live.com/v1/users/ME/conversations/19:70e563f7ea0f4d2097adcabe5ba71d13@thread.skype",
+            "origincontextid": "0",
+            "contenttype": "text",
+            "originalarrivaltime": "2018-05-14T09:15:36.024Z",
+            "from": "https: //ch1-client-s.gateway.messenger.live.com/v1/users/ME/contacts/8:live:gv_grudinin",
+            "content": "1222",
+            "imdisplayname": "gv_grudinin test",
+            "counterpartymessageid": "1526289336144",
+            "id": "1526289336144",
+            "ackrequired": "https: //ch1-client-s.gateway.messenger.live.com/v1/users/ME/conversations/ALL/messages/1526289336144/ack",
+            "version": "1526289336144",
+            "type": "Message",
+            "clientmessageid": "7445300008946638492",
+            "composetime": "2018-05-14T09:15:36.024Z"
+        },
+        "content": "1222",
+        "clientId": "7445300008946638492"
+    }
+}
