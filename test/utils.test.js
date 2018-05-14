@@ -1,6 +1,6 @@
 const nock = require('nock');
 const {expect} = require('chai');
-const {getDisplayName, b2a, a2b, getSkypeMatrixUsers, getRoomName, getIdFromMatrix, getId, getMatrixUsers, getNameToSkype} = require('../src/utils');
+const {getDisplayName, a2b, getSkypeMatrixUsers, getRoomName, getIdFromMatrix, getId, getMatrixUsers, getNameToSkype} = require('../src/utils');
 const {puppet, bridge} = require('../src/config.js');
 
 describe('Utils test', () => {
@@ -30,7 +30,7 @@ describe('Utils test', () => {
         const users = [skypeUser1, '@gv_grudinin:matrix:bingo-boom.ru', skypeUser2];
 
         // eslint-disable-next-line
-        const result = users.map(user => getId(user, b2a));
+        const result = users.map(user => getId(user));
         const expected = ['8:live:abcd', '8:live:gv_grudinin', '8:live:abcd_dcba'];
         expect(result).to.deep.equal(expected);
     });

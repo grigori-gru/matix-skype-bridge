@@ -172,7 +172,7 @@ module.exports = state => {
             url, path, buffer,
             h,
             w,
-            mimetype,
+            type: mimetype,
         } = data;
 
         const matrixRoomId = await getOrCreateMatrixRoomFromThirdPartyRoomId(roomId);

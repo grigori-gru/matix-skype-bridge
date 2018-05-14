@@ -1,6 +1,6 @@
 // const fs = require('fs');
 // const tmp = require('tmp');
-const log = require('../../modules/log')(module);
+// const log = require('../../modules/log')(module);
 const {getDisplayName, a2b, b2a, download, getAvatarUrl, getNameFromId, isSkypeId, getTextContent} = require('../../utils');
 const {deskypeify, skypeify} = require('./skypeify');
 
@@ -103,10 +103,8 @@ module.exports = api => {
         getSkypeRoomData: async id => {
             try {
                 const skypeConversation = await api.getConversation(b2a(id));
-                log.debug(skypeConversation);
                 const topic = skypeConversation.type.toLowerCase() === 'conversation' ? 'Skype Direct Message' : 'Skype Group Chat';
                 const name = deskypeify(skypeConversation.threadProperties.topic) || topic;
-                log.debug('name', name);
                 return {name, topic};
             } catch (err) {
                 throw new Error(err);

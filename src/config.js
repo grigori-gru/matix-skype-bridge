@@ -16,12 +16,15 @@ const deduplicationTagRegex = new RegExp(config.deduplicationTagPattern || ' \\u
 
 const tagMatrixMessage = text => `${text}${deduplicationTag}`;
 const isTaggedMatrixMessage = text => deduplicationTagRegex.test(text);
-const servicePrefix = 'skype';
-const getRoomAliasLocalPartFromThirdPartyRoomId = id => `${servicePrefix}_${id}`;
-const getGhostUserFromThirdPartySenderId = id => `@${servicePrefix}_${id}:${config.bridge.domain}`;
+const servicePrefix = config.puppet.localpart;
+const getRoomAliasLocalPartFromThirdPartyRoomId = id => `${servicePrefix}${id}`;
+const getGhostUserFromThirdPartySenderId = id => `@${servicePrefix}${id}:${config.bridge.domain}`;
 const getRoomAliasFromThirdPartyRoomId = id =>
     `#${getRoomAliasLocalPartFromThirdPartyRoomId(id)}:${config.bridge.domain}`;
 const allowNullSenderName = false;
+
+const getSkypeID = name => `8:live:${name}`;
+
 const clientData = {
     servicePrefix,
     tagMatrixMessage,
@@ -30,6 +33,7 @@ const clientData = {
     getGhostUserFromThirdPartySenderId,
     getRoomAliasFromThirdPartyRoomId,
     allowNullSenderName,
+    getSkypeID,
 };
 
 const URL_BASE = `${config.bridge.homeserverUrl}/_matrix/client/r0`;

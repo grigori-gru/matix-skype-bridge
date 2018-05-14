@@ -37,37 +37,35 @@ module.exports = state => {
 
         messageHandler: async data => {
             try {
-                const sender = data.from.raw;
+                const {raw: sender} = data.from;
                 await textHandler({...data, sender});
-
                 await inviteSkypeConversationMembers(data.conversation);
             } catch (err) {
                 log.error('messageHandler error', err);
             }
         },
 
-        imageHandler: data => {
+        imageHandler: async data => {
             const name = data.original_file_name;
-            const sender = data.from.raw;
+            const {raw: sender} = data.from;
             const url = `${data.uri}/views/imgpsh_fullsize`;
-            // TODO: make normal data parse for img handler
-            const payload = getPayload({...data, sender});
-            payload.text = name;
-            payload.path = '';
+            const payload = {
+                ...await getPayload({...data, sender}),
+                text: name,
+                path: '',
+            };
             if (isMatrixImage(payload)) {
                 log.debug('it is from matrix, so just ignore it.');
                 return;
             }
-
-            return downloadImage(url).then(({buffer, type}) => {
-                payload.buffer = buffer;
-                payload.mimetype = type;
-                return handleSkypeImage(payload);
-            }).catch(err => {
+            try {
+                const {buffer, type} = await downloadImage(url);
+                return handleSkypeImage({payload, buffer, type});
+            } catch (err) {
                 log.error(err);
-                payload.text = `[Image] (${name}) ${url}`;
-                return sendSkypeMessage(payload);
-            });
+                const text = `[Image] (${name}) ${url}`;
+                return sendSkypeMessage({...payload, text});
+            }
         },
     };
 };

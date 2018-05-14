@@ -22,7 +22,7 @@ module.exports = state => {
     } = clientData(state.skypeClient);
 
     const getThirdPartyRoomIdFromMatrixRoomId = matrixRoomId => {
-        const patt = new RegExp(`^#${servicePrefix}_(.+)$`);
+        const patt = new RegExp(`^#${servicePrefix}(.+)$`);
         const room = puppet.getClient().getRoom(matrixRoomId);
         log.debug('reducing array of alases to a 3prid');
         return room.getAliases().reduce((result, alias) => {
@@ -47,7 +47,7 @@ module.exports = state => {
             const {room_id: matrixRoomId, membership, state_key: invitedUser} = data;
             const puppetClient = puppet.getClient();
 
-            if (membership === 'invite' && invitedUser.includes(`${servicePrefix}_`) && invitedUser !== puppetClient.getUserId()) {
+            if (membership === 'invite' && invitedUser.includes(`${servicePrefix}`) && invitedUser !== puppetClient.getUserId()) {
                 const bot = bridge.getBot();
                 const botClient = bot.getClient();
                 const isJoined = puppetClient.getRooms()
