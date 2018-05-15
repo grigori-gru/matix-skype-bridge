@@ -1,7 +1,7 @@
 // const fs = require('fs');
 // const tmp = require('tmp');
 // const log = require('../../modules/log')(module);
-const {getDisplayName, a2b, b2a, download, getAvatarUrl, getNameFromId, isSkypeId, getTextContent} = require('../../utils');
+const {getRoomId, getBody, getDisplayName, a2b, b2a, download, getAvatarUrl, getNameFromId, isSkypeId, getTextContent} = require('../../utils');
 const {deskypeify, skypeify} = require('./skypeify');
 
 
@@ -12,21 +12,24 @@ module.exports = api => {
             (contact.personId === id || contact.mri === id));
     };
 
-    const getSkypeOutputData = async senderId => {
-        const contact = await getContact(senderId);
+    const getUserData = async sender => {
         const output = {};
+        if (!sender) {
+            return output;
+        }
+        const contact = await getContact(sender);
 
         if (contact) {
             output.senderName = contact.displayName;
             output.avatarUrl = contact.profile.avatarUrl;
-        } else if (isSkypeId(senderId)) {
-            output.senderName = getNameFromId(senderId);
-            output.avatarUrl = getAvatarUrl(senderId);
+        } else if (isSkypeId(sender)) {
+            output.senderName = getNameFromId(sender);
+            output.avatarUrl = getAvatarUrl(sender);
         } else {
-            output.senderName = senderId;
+            output.senderName = sender;
         }
 
-        return output;
+        return {...output, senderId: a2b(sender)};
     };
 
     return {
@@ -46,7 +49,7 @@ module.exports = api => {
 
         getSkypeBotId: () => `8:${api.context.username}`,
 
-        getThirdPartyUserDataById: id => getSkypeOutputData(b2a(id)),
+        getThirdPartyUserDataById: id => getUserData(b2a(id)),
 
         sendTextToSkype: async (id, text, {sender}) => {
             try {
@@ -89,16 +92,11 @@ module.exports = api => {
         // },
 
 
-        getPayload: async ({conversation, sender}) => {
-            const roomId = a2b(conversation);
-            const payload = {
-                roomId: roomId.replace(':', '^'),
-            };
-            if (sender) {
-                const outputData = await getSkypeOutputData(sender);
-                return {...payload, ...outputData, senderId: a2b(sender)};
-            }
-            return {...payload, senderId: null};
+        getPayload: async ({content, conversation, sender, html}) => {
+            const userData = await getUserData(sender);
+            const roomId = getRoomId(conversation);
+            const body = getBody(content, userData.senderId, html);
+            return {body, userData, roomId};
         },
         getSkypeRoomData: async id => {
             try {
@@ -113,7 +111,7 @@ module.exports = api => {
 
         testOnly: {
             getContact,
-            getSkypeOutputData,
+            getUserData,
         },
     };
 };

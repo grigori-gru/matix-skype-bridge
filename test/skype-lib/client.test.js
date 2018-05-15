@@ -5,7 +5,7 @@ const {expect} = chai;
 chai.use(sinonChai);
 const proxyquire = require('proxyquire');
 // const config = require('../../src/config.js');
-const {a2b, b2a, getNameFromId, getAvatarUrl, getTextContent} = require('../../src/utils');
+const {a2b, b2a, getNameFromId, getAvatarUrl, getTextContent, getBody, getRoomId} = require('../../src/utils');
 // const fs = require('fs');
 const writeFileStub = stub();
 const {skypeify} = require('../../src/lib/skype-lib/skypeify');
@@ -69,7 +69,7 @@ const {
     getSkypeRoomData,
     testOnly: {
         getContact,
-        getSkypeOutputData,
+        getUserData,
     },
 } = skypeLib(skypeApiMock);
 
@@ -84,37 +84,45 @@ describe('Client testing', () => {
         expect(contact).to.be.undefined;
     });
 
-    describe('getSkypeOutputData test', () => {
-        it('expect getSkypeOutputData returns both senderName and avatarUrl from contact of skypeBot', async () => {
-            const data = await getSkypeOutputData(userAscend.personId);
+    describe('getUserData test', () => {
+        it('expect getUserData returns both senderName and avatarUrl from contact of skypeBot', async () => {
+            const data = await getUserData(userAscend.personId);
             const expected = {
                 senderName: userAscend.displayName,
                 avatarUrl: userAscend.profile.avatarUrl,
+                senderId: a2b(userAscend.personId),
             };
             expect(data).to.be.deep.equal(expected);
         });
-        it('expect getSkypeOutputData returns tail of senderName and avatarUrl from skype if it\'s not in contacts of skypeBot', async () => {
+        it('expect getUserData returns tail of senderName and avatarUrl from skype if it\'s not in contacts of skypeBot', async () => {
             const id = '8:live:testUser';
-            const data = await getSkypeOutputData(id);
+            const data = await getUserData(id);
             const expected = {
                 senderName: getNameFromId(id),
                 avatarUrl: getAvatarUrl(id),
+                senderId: a2b(id),
             };
             expect(data).to.be.deep.equal(expected);
         });
-        it('expect getSkypeOutputData returns senderId as senderName user is not from Skype', async () => {
+        it('expect getUserData returns senderId as senderName user is not from Skype', async () => {
             const id = 'matrix_user';
-            const data = await getSkypeOutputData(id);
+            const data = await getUserData(id);
             const expected = {
                 senderName: id,
+                senderId: a2b(id),
             };
+            expect(data).to.be.deep.equal(expected);
+        });
+        it('expect getUserData returns empty object if no sender we have', async () => {
+            const data = await getUserData(null);
+            const expected = {};
             expect(data).to.be.deep.equal(expected);
         });
     });
 
     describe('getPayload test', () => {
         const conversation = 'someRoomName';
-        it('expect getPayload returns sender id and "getSkypeOutputData" if data have sender', async () => {
+        it('expect getPayload returns sender id and "getUserData" if data have sender', async () => {
             const sender = userIvan.personId;
             const data = {
                 conversation,
@@ -123,24 +131,27 @@ describe('Client testing', () => {
                 type: 'RichText',
             };
             const result = await getPayload(data);
-            const outputData = await getSkypeOutputData(data.sender);
+            const userData = await getUserData(data.sender);
             const expected = {
-                roomId: a2b(conversation).replace(':', '^'),
-                senderId: a2b(data.sender),
-                ...outputData,
+                roomId: getRoomId(conversation),
+                userData,
+                body: getBody(data.content, userData.senderId, data.html),
             };
             expect(result).to.be.deep.equal(expected);
         });
-        it('expect getPayload returns senderid with null and no "getSkypeOutputData" if data have no sender or it\'s null', async () => {
+        it('expect getPayload returns senderid with null and no "getUserData" if data have no sender or it\'s null', async () => {
             const data = {
                 conversation,
                 content: 'content',
                 type: 'RichText',
             };
             const result = await getPayload(data);
+            const userData = await getUserData(data.sender);
+
             const expected = {
-                roomId: a2b(conversation).replace(':', '^'),
-                senderId: null,
+                roomId: getRoomId(conversation),
+                userData,
+                body: getBody(data.content, userData.senderId, data.html),
             };
             expect(result).to.be.deep.equal(expected);
         });

@@ -8,12 +8,20 @@ const {AllHtmlEntities: Entities} = require('html-entities');
 const entities = new Entities();
 const log = require('./modules/log')(module);
 const {bridge, puppet, SKYPE_USERS_TO_IGNORE, URL_BASE, clientData} = require('./config.js');
-const {isTaggedMatrixMessage, servicePrefix, getSkypeID} = clientData;
+const {isTaggedMatrixMessage, servicePrefix, getSkypeID, tagMatrixMessage} = clientData;
+const {deskypeify} = require('./lib/skype-lib/skypeify');
 
 // check if tag is right before file extension
 const FILENAME_TAG_PATTERN = /^.+_mx_\..+$/;
 
 const isFilenameTagged = filepath => !!filepath.match(FILENAME_TAG_PATTERN);
+
+// tag the message to know it was sent by the bridge
+const autoTagger = (sender, func) => text =>
+    (sender ? text : func(text));
+
+const tag = (text = '', sender) =>
+    autoTagger(sender, tagMatrixMessage)(deskypeify(text));
 
 const utils = {
     isTypeErrorMessage: err =>
@@ -143,16 +151,26 @@ const utils = {
             .filter(id => usersIds.includes(id));
     },
 
-    // tag the message to know it was sent by the bridge
-    autoTagger: (senderId, func) => (text = '') =>
-        (senderId ? text : func(text)),
+    isMatrixMessage: ({sender, content}) =>
+        (!sender) && isTaggedMatrixMessage(deskypeify(content)),
 
+    isMatrixImage: ({content, path}) =>
+        (isTaggedMatrixMessage(content) || isFilenameTagged(path)),
 
-    isMatrixMessage: ({senderId}, text) =>
-        (!senderId) && isTaggedMatrixMessage(text),
+    getRoomId: conversation => utils.a2b(conversation).replace(':', '^'),
 
-    isMatrixImage: ({text, path}) =>
-        (isTaggedMatrixMessage(text) || isFilenameTagged(path)),
+    getBody: (content, senderId, html) => {
+        const body = {
+            body: tag(content, senderId),
+            msgtype: 'm.text',
+        };
+        if (html) {
+            // eslint-disable-next-line
+            body.formatted_body = html;
+            body.format = 'org.matrix.custom.html';
+        }
+        return body;
+    },
 };
 
 module.exports = utils;

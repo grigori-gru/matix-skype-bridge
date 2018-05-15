@@ -1,5 +1,4 @@
-const clientData = require('../skype-lib/client');
-const {deskypeify} = require('../skype-lib/skypeify');
+const clientLib = require('../skype-lib/client');
 const log = require('../../modules/log')(module);
 const lib = require('./lib');
 const {isMatrixMessage, isMatrixImage} = require('../../utils');
@@ -8,7 +7,7 @@ module.exports = state => {
     const {
         downloadImage,
         getPayload,
-    } = clientData(state.skypeClient);
+    } = clientLib(state.skypeClient);
 
     const {
         inviteSkypeConversationMembers,
@@ -18,15 +17,13 @@ module.exports = state => {
 
     const textHandler = async data => {
         try {
-            const payload = await getPayload(data);
-            const text = deskypeify(data.content);
-            if (isMatrixMessage(payload, text)) {
+            if (isMatrixMessage(data)) {
                 log.debug('it is from matrix, so just ignore it.');
                 return;
             }
-
-            log.debug('it is from 3rd party client');
-            return sendSkypeMessage({...payload, text});
+            log.debug('It is from skype!');
+            const payload = await getPayload(data);
+            return sendSkypeMessage(payload);
         } catch (err) {
             log.error('sentHandler error', err);
         }

@@ -5,7 +5,7 @@ const {RemoteUser} = require('matrix-appservice-bridge');
 const log = require('../../modules/log')(module);
 const config = require('../../config');
 const {autoTagger, download, getMatrixRoomAlias, getMatrixUsers} = require('../../utils');
-const clientData = require('../skype-lib/client');
+const skypeLib = require('../skype-lib/client');
 
 const {
     getRoomAliasFromThirdPartyRoomId,
@@ -21,7 +21,7 @@ module.exports = state => {
     const {
         getThirdPartyUserDataById,
         getSkypeRoomData,
-    } = clientData(skypeClient);
+    } = skypeLib(skypeClient);
 
 
     const setGhostAvatar = (ghostIntent, avatarUrl) => {
@@ -224,31 +224,14 @@ module.exports = state => {
         });
     };
 
-    const sendSkypeMessage = async messageData => {
-        log.debug('handling third party room message', messageData);
-        const {
-            roomId,
-            senderName,
-            senderId,
-            avatarUrl,
-            text,
-            html,
-        } = messageData;
-
+    const sendSkypeMessage = async ({body, userData, roomId}) => {
+        log.debug('sending message with body', body);
+        log.debug('from skype to Matrix room', roomId);
+        log.debug('as Matrix intent', userData);
         try {
+            const {senderId, senderName, avatarUrl} = userData;
             const matrixRoomId = await getOrCreateMatrixRoomFromThirdPartyRoomId(roomId);
             const client = await getUserClient(matrixRoomId, senderId, senderName, avatarUrl);
-            const tag = autoTagger(senderId, tagMatrixMessage);
-
-            const body = {
-                'body': tag(text),
-                'msgtype': 'm.text',
-            };
-            if (html) {
-                // eslint-disable-next-line
-                body.formatted_body = html;
-                body.format = 'org.matrix.custom.html';
-            }
             return client.sendMessage(matrixRoomId, body);
         } catch (err) {
             log.error('sendSkypeMessage', err);

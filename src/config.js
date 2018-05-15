@@ -16,7 +16,7 @@ const deduplicationTagRegex = new RegExp(config.deduplicationTagPattern || ' \\u
 
 const tagMatrixMessage = text => `${text}${deduplicationTag}`;
 const isTaggedMatrixMessage = text => deduplicationTagRegex.test(text);
-const servicePrefix = config.puppet.localpart;
+const servicePrefix = 'skype_';
 const getRoomAliasLocalPartFromThirdPartyRoomId = id => `${servicePrefix}${id}`;
 const getGhostUserFromThirdPartySenderId = id => `@${servicePrefix}${id}:${config.bridge.domain}`;
 const getRoomAliasFromThirdPartyRoomId = id =>
