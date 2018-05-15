@@ -1,6 +1,6 @@
 // const fs = require('fs');
 // const tmp = require('tmp');
-// const log = require('../../modules/log')(module);
+const log = require('../../modules/log')(module);
 const {getRoomId, getBody, getDisplayName, a2b, b2a, download, getAvatarUrl, getNameFromId, isSkypeId, getTextContent} = require('../../utils');
 const {deskypeify, skypeify} = require('./skypeify');
 
@@ -40,7 +40,7 @@ module.exports = api => {
             },
         }),
 
-        createConversationWithTopic: ({topic, allUsers}) =>
+        createSkypeConversation: ({topic, allUsers}) =>
             api.createConversation(allUsers)
                 .then(id =>
                     api.setConversationTopic(id, topic)
@@ -62,7 +62,7 @@ module.exports = api => {
         },
 
         // TODO: try to change
-        // sendImageMessageAsPuppetToThirdPartyRoomWithId: (id, data) => {
+        // sendImageToSkype: (id, data) => {
         //     let cleanup = () => {};
         //     return new Promise((resolve, reject) => {
         //         tmp.file((err, path, fd, cleanupCallback) => {
@@ -103,6 +103,7 @@ module.exports = api => {
                 const skypeConversation = await api.getConversation(b2a(id));
                 const topic = skypeConversation.type.toLowerCase() === 'conversation' ? 'Skype Direct Message' : 'Skype Group Chat';
                 const name = deskypeify(skypeConversation.threadProperties.topic) || topic;
+                log.debug('got skype room data', {name, topic});
                 return {name, topic};
             } catch (err) {
                 throw new Error(err);

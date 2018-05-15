@@ -59,6 +59,29 @@ module.exports = class Puppet {
         return this.client;
     }
 
+    async getRoom(roomAlias) {
+        try {
+            const {room_id: roomId} = await this.client.getRoomIdForAlias(roomAlias);
+            log.debug('found matrix room via alias. room_id:', roomId);
+            return roomId;
+        } catch (err) {
+            log.debug('the room doesn\'t exist. we need to create it for the first time');
+        }
+    }
+
+    async joinRoom(room) {
+        try {
+            await this.client.joinRoom(room);
+            return;
+        } catch (err) {
+            if (err.message === 'No known servers') {
+                log.warn('we cannot use this room anymore because you cannot currently rejoin an empty room (synapse limitation? riot throws this error too). we need to de-alias it now so a new room gets created that we can actually use.');
+                return err.message;
+            }
+            log.warn('ignoring error from puppet join room: ', err.message);
+        }
+    }
+
     async associate() {
         log.info([
             'This bridge performs matrix user puppeting.',

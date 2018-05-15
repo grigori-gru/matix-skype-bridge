@@ -2,29 +2,18 @@ const log = require('../../modules/log')(module);
 const {a2b, b2a, setRoomAlias, getSkypeMatrixUsers, getRoomName} = require('../../utils');
 const config = require('../../config');
 const {domain} = config.bridge;
-const clientData = require('../skype-lib/client');
-
-const {
-    servicePrefix,
-    tagMatrixMessage,
-    isTaggedMatrixMessage,
-    getRoomAliasFromThirdPartyRoomId,
-} = config.clientData;
+const skypeApi = require('../skype-lib/client');
+const {servicePrefix, tagMatrixMessage, isTaggedMatrixMessage, getRoomAlias} = config.clientData;
 
 
 module.exports = state => {
     const {puppet, bridge, skypeClient} = state;
-
-    const {
-        createConversationWithTopic,
-        sendTextToSkype,
-        sendImageMessageAsPuppetToThirdPartyRoomWithId,
-    } = clientData(state.skypeClient);
+    const {createSkypeConversation, sendTextToSkype, sendImageToSkype} = skypeApi(state.skypeClient);
 
     const getThirdPartyRoomIdFromMatrixRoomId = matrixRoomId => {
         const patt = new RegExp(`^#${servicePrefix}(.+)$`);
         const room = puppet.getClient().getRoom(matrixRoomId);
-        log.debug('reducing array of alases to a 3prid');
+        log.debug('reducing array of aliases to a 3prid');
         return room.getAliases().reduce((result, alias) => {
             const localpart = alias.replace(`:${domain}`, '');
             const matches = localpart.match(patt);
@@ -64,7 +53,7 @@ module.exports = state => {
                     const contacts = await skypeClient.getContacts();
                     const skypeMatrixUsers = getSkypeMatrixUsers(contacts, users);
                     const allUsers = {users: skypeMatrixUsers, admins: [skypeClient.getSkypeBotId()]};
-                    return createConversationWithTopic({topic: roomName, allUsers});
+                    return createSkypeConversation({topic: roomName, allUsers});
                 };
 
 
@@ -85,7 +74,7 @@ module.exports = state => {
                                 onRoomNameAndUserCollection(usersCollection, roomName)))
                     .then(skypeRoomId => {
                         log.debug('Skype room %s is made', skypeRoomId);
-                        const alias = getRoomAliasFromThirdPartyRoomId(a2b(skypeRoomId));
+                        const alias = getRoomAlias(a2b(skypeRoomId));
                         return setRoomAlias(matrixRoomId, alias);
                     })
                     .catch(err =>
@@ -112,7 +101,7 @@ module.exports = state => {
                         log.debug('picture message from riot');
 
                         const url = puppet.getClient().mxcUrlToHttp(data.content.url);
-                        return sendImageMessageAsPuppetToThirdPartyRoomWithId(thirdPartyRoomId, {
+                        return sendImageToSkype(thirdPartyRoomId, {
                             url,
                             text: tagMatrixMessage(body),
                         }, data);

@@ -13,7 +13,6 @@ module.exports = state => (req, _context) => {
             log.debug('incoming message. data:', data);
             return handleMatrixMemberEvent(data);
         default:
-            log.debug('ignored a matrix event', data.type);
             break;
     }
 };

@@ -1,51 +1,33 @@
 const path = require('path');
 const fs = require('fs');
-const {RemoteUser} = require('matrix-appservice-bridge');
 
 const log = require('../../modules/log')(module);
-const config = require('../../config');
+const {getRoomAlias, tagMatrixMessage, getRoomAliasName, getGhostUserFromThirdPartySenderId} = require('../../config').clientData;
 const {autoTagger, download, getMatrixRoomAlias, getMatrixUsers} = require('../../utils');
 const skypeLib = require('../skype-lib/client');
 
-const {
-    getRoomAliasFromThirdPartyRoomId,
-    tagMatrixMessage,
-    getRoomAliasLocalPartFromThirdPartyRoomId,
-    getGhostUserFromThirdPartySenderId,
-    allowNullSenderName,
-} = config.clientData;
-
 module.exports = state => {
     const {puppet, skypeClient, bridge} = state;
+    const {getSkypeRoomData} = skypeLib(skypeClient);
 
-    const {
-        getThirdPartyUserDataById,
-        getSkypeRoomData,
-    } = skypeLib(skypeClient);
-
-
-    const setGhostAvatar = (ghostIntent, avatarUrl) => {
+    const setGhostAvatar = async (ghostIntent, avatarUrl) => {
         const client = ghostIntent.getClient();
 
-        return ghostIntent.getProfileInfo(client.credentials.userId, 'avatar_url').then(({avatar_url: avatarUrl}) => {
-            if (avatarUrl) {
-                log.debug('refusing to overwrite existing avatar');
-                return null;
-            }
-            log.debug('downloading avatar from public web', avatarUrl);
-            return download.getBufferAndType(avatarUrl).then(({buffer, type}) => {
-                const opts = {
-                    name: path.basename(avatarUrl),
-                    type,
-                    rawResponse: false,
-                };
-                return client.uploadContent(buffer, opts);
-            }).then(res => {
-                const contentUri = res.content_uri;
-                log.debug('uploaded avatar and got back content uri', contentUri);
-                return ghostIntent.setAvatarUrl(contentUri);
-            });
-        });
+        const {avatar_url: currentAvatarUrl} = await ghostIntent.getProfileInfo(client.credentials.userId, 'avatar_url');
+        if (currentAvatarUrl) {
+            log.debug('refusing to overwrite existing avatar');
+            return;
+        }
+        log.debug('downloading avatar from public web', avatarUrl);
+        const {buffer, type} = await download.getBufferAndType(avatarUrl);
+        const opts = {
+            name: path.basename(avatarUrl),
+            type,
+            rawResponse: false,
+        };
+        const {content_uri: contentUri} = await client.uploadContent(buffer, opts);
+        log.debug('uploaded avatar and got back content uri', contentUri);
+        return ghostIntent.setAvatarUrl(contentUri);
     };
 
     const getIntentFromThirdPartySenderId = (userId, name, avatarUrl) => {
@@ -62,103 +44,50 @@ module.exports = state => {
         return Promise.all(promiseList).then(() => ghostIntent);
     };
 
-    const getOrInitRemoteUserStoreDataFromThirdPartyUserId = thirdPartyUserId => {
-        const userStore = bridge.getUserStore();
-        return userStore.getRemoteUser(thirdPartyUserId).then(rUser => {
-            if (rUser) {
-                log.debug('found existing remote user in store', rUser);
-                return rUser;
-            }
-            log.debug('did not find existing remote user in store, we must create it now');
-            return getThirdPartyUserDataById(thirdPartyUserId).then(thirdPartyUserData => {
-                log.debug('got 3p user data:', thirdPartyUserData);
-                return new RemoteUser(thirdPartyUserId, {
-                    senderName: thirdPartyUserData.senderName,
-                }).then(rUser => userStore.setRemoteUser(rUser)).then(() => userStore.getRemoteUser(thirdPartyUserId))
-                    .then(rUser => rUser);
-            });
-        });
-    };
-
-
-    const getUserClient = (roomId, senderId, senderName, avatarUrl, doNotTryToGetRemoteUserStoreData) => {
+    const getUserClient = async (roomId, userData, doNotTryToGetRemoteUserStoreData) => {
+        const {senderId, senderName, avatarUrl} = userData;
         log.debug('get user client for third party user %s (%s)', senderId, senderName);
 
         if (!senderId) {
-            return Promise.resolve(puppet.getClient());
-        }
-        if (!senderName && !allowNullSenderName) {
-            if (doNotTryToGetRemoteUserStoreData) {
-                throw new Error('preventing an endless loop');
-            }
-
-            log.debug('no senderName provided with payload, will check store');
-            return getOrInitRemoteUserStoreDataFromThirdPartyUserId(senderId).then(remoteUser => {
-                log.debug('got remote user from store, with a possible client API call in there somewhere', remoteUser);
-                log.debug('will retry now');
-                const senderName = remoteUser.get('senderName');
-                return getUserClient(roomId, senderId, senderName, avatarUrl, true);
-            });
+            return puppet.getClient();
         }
 
         log.debug('this message was not sent by me');
-        return getIntentFromThirdPartySenderId(senderId, senderName, avatarUrl)
-            .then(ghostIntent =>
-                ghostIntent.join(roomId).then(() => ghostIntent.getClient()));
+        const ghostIntent = await getIntentFromThirdPartySenderId(senderId, senderName, avatarUrl);
+        await ghostIntent.join(roomId);
+        return ghostIntent.getClient();
     };
 
     const getIntentFromApplicationServerBot = () => bridge.getIntent();
 
-    const getOrCreateMatrixRoomFromThirdPartyRoomId = thirdPartyRoomId => {
-        const roomAlias = getRoomAliasFromThirdPartyRoomId(thirdPartyRoomId);
-        const roomAliasName = getRoomAliasLocalPartFromThirdPartyRoomId(thirdPartyRoomId);
-        log.debug('looking up', thirdPartyRoomId);
-        const puppetClient = puppet.getClient();
+    const getOrCreateMatrixRoom = async skypeRoomId => {
+        const roomAlias = getRoomAlias(skypeRoomId);
+        const roomAliasName = getRoomAliasName(skypeRoomId);
+        log.debug('looking up room with alias', roomAlias);
         const botIntent = getIntentFromApplicationServerBot();
         const botClient = botIntent.getClient();
-
-        return puppetClient.getRoomIdForAlias(roomAlias).then(({room_id: roomId}) => {
-            log.debug('found matrix room via alias. room_id:', roomId);
-            return roomId;
-        }, _err => {
-            log.debug('the room doesn\'t exist. we need to create it for the first time');
-            return Promise.resolve(getSkypeRoomData(thirdPartyRoomId)).then(thirdPartyRoomData => {
-                log.debug('got 3p room data', thirdPartyRoomData);
-                const {name, topic} = thirdPartyRoomData;
-                log.debug('creating room !!!!', `>>>>${roomAliasName}<<<<`, name, topic);
-                return botIntent.createRoom({
-                    // bot won't auto-join the room in this case
-                    createAsClient: true,
-                    options: {
-                        name, topic, 'room_alias_name': roomAliasName,
-                    },
-                }).then(({room_id: roomId}) => {
-                    log.debug('room created', roomId, roomAliasName);
-                    return roomId;
-                });
-            });
-        }).then(matrixRoomId => {
-            log.debug('making puppet join room', matrixRoomId);
-            return puppetClient.joinRoom(matrixRoomId)
-                .then(() => matrixRoomId)
-                .catch(err => {
-                    if (err.message === 'No known servers') {
-                        log.warn('we cannot use this room anymore because you cannot currently rejoin an empty room (synapse limitation? riot throws this error too). we need to de-alias it now so a new room gets created that we can actually use.');
-                        return botClient.deleteAlias(roomAlias).then(() => {
-                            log.warn('deleted alias... trying again to get or create room.');
-                            return getOrCreateMatrixRoomFromThirdPartyRoomId(thirdPartyRoomId);
-                        });
-                    }
-                    log.warn('ignoring error from puppet join room: ', err.message);
-                    return matrixRoomId;
-                });
-        })
-            .then(matrixRoomId => {
-                puppet.saveThirdPartyRoomId(matrixRoomId, thirdPartyRoomId);
-                return matrixRoomId;
-            });
+        const curRoomId = await puppet.getRoom(roomAlias);
+        if (curRoomId) {
+            return curRoomId;
+        }
+        log.debug('creating room !!!!', `>>>>${roomAliasName}<<<<`);
+        const skypeRoomData = await getSkypeRoomData(skypeRoomId);
+        const options = {
+            ...skypeRoomData,
+            'room_alias_name': roomAliasName,
+        };
+        const {room_id: newRoomId} = await botIntent.createRoom({createAsClient: true, options});
+        log.debug('room created', newRoomId, roomAliasName);
+        log.debug('making puppet join room', newRoomId);
+        const isServerError = await puppet.joinRoom(newRoomId);
+        if (isServerError) {
+            await botClient.deleteAlias(roomAlias);
+            log.warn('deleted alias... trying again to get or create room.');
+            return getOrCreateMatrixRoom(skypeRoomId);
+        }
+        puppet.saveThirdPartyRoomId(newRoomId, skypeRoomId);
+        return newRoomId;
     };
-
 
     const handleSkypeImage = async data => {
         log.debug('handling third party room image message', data);
@@ -175,7 +104,7 @@ module.exports = state => {
             type: mimetype,
         } = data;
 
-        const matrixRoomId = await getOrCreateMatrixRoomFromThirdPartyRoomId(roomId);
+        const matrixRoomId = await getOrCreateMatrixRoom(roomId);
         const client = await getUserClient(matrixRoomId, senderId, senderName, avatarUrl);
         if (!senderId) {
             log.debug('this message was sent by me, but did it come from a matrix client or a 3rd party client?');
@@ -229,28 +158,27 @@ module.exports = state => {
         log.debug('from skype to Matrix room', roomId);
         log.debug('as Matrix intent', userData);
         try {
-            const {senderId, senderName, avatarUrl} = userData;
-            const matrixRoomId = await getOrCreateMatrixRoomFromThirdPartyRoomId(roomId);
-            const client = await getUserClient(matrixRoomId, senderId, senderName, avatarUrl);
+            const matrixRoomId = await getOrCreateMatrixRoom(roomId);
+            const client = await getUserClient(matrixRoomId, userData);
             return client.sendMessage(matrixRoomId, body);
         } catch (err) {
             log.error('sendSkypeMessage', err);
         }
     };
 
-    const inviteSkypeConversationMembers = async conversation => {
+    const inviteSkypeConversationMembers = async skypeRoom => {
         try {
-            const skypeConversation = await skypeClient.getConversation(conversation);
+            const skypeConversation = await skypeClient.getConversation(skypeRoom);
             const {members: skypeRoomMembers} = skypeConversation;
-            const roomId = getMatrixRoomAlias(conversation);
-            const matrixRoomId = await getOrCreateMatrixRoomFromThirdPartyRoomId(roomId);
+            const matrixRoomAlias = getMatrixRoomAlias(skypeRoom);
+            const matrixRoomId = await getOrCreateMatrixRoom(matrixRoomAlias);
             const matrixRoomMembers = puppet.getMatrixRoomMembers(matrixRoomId);
 
             const ininvitedUsers = getMatrixUsers(skypeRoomMembers)
                 .filter(user => !matrixRoomMembers.includes(user));
 
             if (ininvitedUsers.length === 0) {
-                log.debug('All members in skype conversation are already joined in Matrix room: ', matrixRoomId);
+                log.debug('All members in skype skypeRoom %s are already joined in Matrix room: ', skypeRoom, matrixRoomAlias);
             } else {
                 return Promise.all(ininvitedUsers.map(user => puppet.client.invite(matrixRoomId, user)))
                     .then(() => log.debug('New users invited to room: ', matrixRoomId));
@@ -264,5 +192,11 @@ module.exports = state => {
         inviteSkypeConversationMembers,
         sendSkypeMessage,
         handleSkypeImage,
+        testOnly: {
+            getOrCreateMatrixRoom,
+            getIntentFromApplicationServerBot,
+            getUserClient,
+            getIntentFromThirdPartySenderId,
+        },
     };
 };

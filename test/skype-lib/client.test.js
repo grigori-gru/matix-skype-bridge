@@ -64,7 +64,7 @@ getContactsStub.resolves(skypeApiMock.contacts);
 
 const {
     sendTextToSkype,
-    // sendImageMessageAsPuppetToThirdPartyRoomWithId,
+    // sendImageToSkype,
     getPayload,
     getSkypeRoomData,
     testOnly: {
@@ -204,14 +204,14 @@ describe('Client testing', () => {
         });
     });
 
-    // it('expect sendImageMessageAsPuppetToThirdPartyRoomWithId to send image and not to have data in config.tmp dir', async () => {
+    // it('expect sendImageToSkype to send image and not to have data in config.tmp dir', async () => {
     //     const id = a2b('8:live:abcd');
     //     const data = {
     //         text: 'text',
     //         url: 'http://testUrl',
     //     };
 
-    //     await sendImageMessageAsPuppetToThirdPartyRoomWithId(id, data);
+    //     await sendImageToSkype(id, data);
 
     //     const expectedMessage = {
     //         file: config.tmpPath,
