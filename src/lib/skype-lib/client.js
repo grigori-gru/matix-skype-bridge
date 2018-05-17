@@ -1,7 +1,7 @@
 // const fs = require('fs');
 // const tmp = require('tmp');
 const log = require('../../modules/log')(module);
-const {getRoomId, getBody, getDisplayName, a2b, b2a, download, getAvatarUrl, getNameFromId, isSkypeId, getTextContent} = require('../../utils');
+const {getRoomName, getSkypeMatrixUsers, getRoomId, getBody, getDisplayName, a2b, b2a, getBufferAndType, getAvatarUrl, getNameFromId, isSkypeId, getTextContent} = require('../../utils');
 const {deskypeify, skypeify} = require('./skypeify');
 
 
@@ -32,30 +32,42 @@ module.exports = api => {
         return {...output, senderId: a2b(sender)};
     };
 
+    const getSkypeBotId = () => `8:${api.context.username}`;
+
+    const createSkypeConversation = async (roomName, allUsers) => {
+        log.debug('Create Skype conversation with name %s and users:', roomName, allUsers);
+        const skypeRoomId = await api.createConversation(allUsers);
+        await api.setConversationTopic(skypeRoomId, roomName);
+        log.debug('Skype room %s is made', skypeRoomId);
+        return skypeRoomId;
+    };
+
     return {
-        downloadImage: url => download.getBufferAndType(url, {
+        downloadImage: url => getBufferAndType(url, {
             cookies: api.context.cookies,
             headers: {
                 Authorization: `skype_token ${api.context.skypeToken.value}`,
             },
         }),
 
-        createSkypeConversation: ({topic, allUsers}) =>
-            api.createConversation(allUsers)
-                .then(id =>
-                    api.setConversationTopic(id, topic)
-                        .then(() => id)),
+        createConversation: async (usersCollection, matrixRoomId) => {
+            const roomName = await getRoomName(matrixRoomId);
+            const users = Object.keys(usersCollection);
+            const contacts = await api.getContacts();
+            const skypeMatrixUsers = getSkypeMatrixUsers(contacts, users);
+            const allUsers = {
+                users: skypeMatrixUsers,
+                admins: [getSkypeBotId()],
+            };
+            return createSkypeConversation(roomName, allUsers);
+        },
 
 
-        getSkypeBotId: () => `8:${api.context.username}`,
-
-        getThirdPartyUserDataById: id => getUserData(b2a(id)),
-
-        sendTextToSkype: async (id, text, {sender}) => {
+        sendTextToSkype: async (id, text, sender) => {
             try {
                 const displayName = await getDisplayName(sender);
                 const textContent = skypeify(getTextContent(displayName, text));
-                await api.sendMessage(b2a(id), {textContent});
+                await api.sendMessage({textContent}, b2a(id));
             } catch (error) {
                 throw new Error(error);
             }
@@ -71,7 +83,7 @@ module.exports = api => {
         //             }
         //             cleanup = cleanupCallback;
         //             const tmpFile = fs.createWriteStream(path);
-        //             download.getBufferAndType(data.url).then(({buffer, type}) => {
+        //             getBufferAndType(data.url).then(({buffer, type}) => {
         //                 tmpFile.write(buffer, err => {
         //                     if (err) {
         //                         reject(err);
@@ -92,7 +104,7 @@ module.exports = api => {
         // },
 
 
-        getPayload: async ({content, conversation, sender, html}) => {
+        getPayload: async ({content, conversation, from: {raw: sender}, html}) => {
             const userData = await getUserData(sender);
             const roomId = getRoomId(conversation);
             const body = getBody(content, userData.senderId, html);
@@ -109,6 +121,8 @@ module.exports = api => {
                 throw new Error(err);
             }
         },
+
+        getName: () => api.context.username,
 
         testOnly: {
             getContact,

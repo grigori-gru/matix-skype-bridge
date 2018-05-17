@@ -8,13 +8,13 @@ const {AllHtmlEntities: Entities} = require('html-entities');
 const entities = new Entities();
 const log = require('./modules/log')(module);
 const {bridge, puppet, SKYPE_USERS_TO_IGNORE, URL_BASE, clientData} = require('./config.js');
-const {isTaggedMatrixMessage, servicePrefix, getSkypeID, tagMatrixMessage} = clientData;
+const {servicePrefix, getSkypeID, tagMatrixMessage} = clientData;
 const {deskypeify} = require('./lib/skype-lib/skypeify');
 
-// check if tag is right before file extension
-const FILENAME_TAG_PATTERN = /^.+_mx_\..+$/;
+// // check if tag is right before file extension
+// const FILENAME_TAG_PATTERN = /^.+_mx_\..+$/;
 
-const isFilenameTagged = filepath => !!filepath.match(FILENAME_TAG_PATTERN);
+// const isFilenameTagged = filepath => !!filepath.match(FILENAME_TAG_PATTERN);
 
 // tag the message to know it was sent by the bridge
 const autoTagger = (sender, func) => text =>
@@ -23,7 +23,26 @@ const autoTagger = (sender, func) => text =>
 const tag = (text = '', sender) =>
     autoTagger(sender, tagMatrixMessage)(deskypeify(text));
 
+const getStream = (url, data) => needle.get(url, data);
+
+const downloadGetBufferAndHeaders = (url, data) =>
+    new Promise((resolve, reject) => {
+        let headers = {
+            'content-type': 'application/octet-stream',
+        };
+        const stream = getStream(url, data);
+        stream.on('header', (_s, _h) => {
+            headers = _h;
+        });
+        stream.pipe(concatStream(buffer => {
+            resolve({buffer, headers});
+        })).on('error', reject);
+    });
+
 const utils = {
+    isInviteNewUserEvent: (puppet, {membership, state_key: invitedUser}) =>
+        (membership === 'invite' && invitedUser.includes(`${servicePrefix}`) && invitedUser !== puppet.getUserId()),
+
     isTypeErrorMessage: err =>
         ['ressource.messageType', 'EventMessage.resourceType'].reduce((acc, val) =>
             acc || err.stack.includes(val), false),
@@ -103,24 +122,14 @@ const utils = {
             .map(user =>
                 `@${user.split(':').pop()}:${bridge.domain}`),
 
-    getStream: (url, data) => needle.get(url, data),
-
-    downloadGetBufferAndHeaders: (url, data) =>
-        new Promise((resolve, reject) => {
-            let headers = {
-                'content-type': 'application/octet-stream',
-            };
-            const stream = utils.getStream(url, data);
-            stream.on('header', (_s, _h) => {
-                headers = _h;
-            });
-            stream.pipe(concatStream(buffer => {
-                resolve({buffer, headers});
-            })).on('error', reject);
-        }),
+    getInvitedUsers: (skypeRoomMembers, matrixRoomMembers) => {
+        const result = utils.getMatrixUsers(skypeRoomMembers)
+            .filter(user => !matrixRoomMembers.includes(user));
+        return result.length > 0 ? result : null;
+    },
 
     getBufferAndType: (url, data) =>
-        utils.downloadGetBufferAndHeaders(url, data)
+        downloadGetBufferAndHeaders(url, data)
             .then(({buffer, headers}) => {
                 let type;
                 const contentType = headers['content-type'];
@@ -151,11 +160,11 @@ const utils = {
             .filter(id => usersIds.includes(id));
     },
 
-    isMatrixMessage: ({sender, content}) =>
-        (!sender) && isTaggedMatrixMessage(deskypeify(content)),
+    // TODO: it's outdated now
+    // isMatrixMessage: content => isTaggedMatrixMessage(deskypeify(content)),
 
-    isMatrixImage: ({content, path}) =>
-        (isTaggedMatrixMessage(content) || isFilenameTagged(path)),
+    // isMatrixImage: ({original_file_name: name, path}) =>
+    //     (isTaggedMatrixMessage(name) || isFilenameTagged(path)),
 
     getRoomId: conversation => utils.a2b(conversation).replace(':', '^'),
 

@@ -50,6 +50,10 @@ module.exports = class Puppet {
         return this.matrixRoomMembers[roomId] || [];
     }
 
+    getUserId() {
+        return this.client.credentials.userId;
+    }
+
     /**
      * Returns the MatrixClient
      *
@@ -69,6 +73,12 @@ module.exports = class Puppet {
         }
     }
 
+    isJoined(matrixRoomId) {
+        return this.client.getRooms()
+            .find(({roomId}) => roomId === matrixRoomId);
+    }
+
+
     async joinRoom(room) {
         try {
             await this.client.joinRoom(room);
@@ -80,6 +90,12 @@ module.exports = class Puppet {
             }
             log.warn('ignoring error from puppet join room: ', err.message);
         }
+    }
+
+    invite(roomId, users) {
+        return Promise.all(users.map(user =>
+            this.client.invite(roomId, user)
+                .then(() => log.debug('New user %s invited to room %s', user, roomId))));
     }
 
     async associate() {

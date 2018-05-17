@@ -1,3 +1,4 @@
+const log = require('../../src/modules/log')(module);
 const chai = require('chai');
 const {stub} = require('sinon');
 const sinonChai = require('sinon-chai');
@@ -9,6 +10,8 @@ const {a2b, b2a, getNameFromId, getAvatarUrl, getTextContent, getBody, getRoomId
 // const fs = require('fs');
 const writeFileStub = stub();
 const {skypeify} = require('../../src/lib/skype-lib/skypeify');
+const imageEvent = require('../fixtures/skype-image.json');
+const messageEvent = require('../fixtures/skype-message.json');
 
 const sendImageStub = stub();
 const getConversationStub = stub();
@@ -121,38 +124,28 @@ describe('Client testing', () => {
     });
 
     describe('getPayload test', () => {
-        const conversation = 'someRoomName';
-        it('expect getPayload returns sender id and "getUserData" if data have sender', async () => {
-            const sender = userIvan.personId;
-            const data = {
-                conversation,
-                content: 'content',
-                sender,
-                type: 'RichText',
-            };
+        it('expect getPayload returns correct from message event', async () => {
+            const data = messageEvent.resource;
             const result = await getPayload(data);
-            const userData = await getUserData(data.sender);
+            const userData = await getUserData(data.from.raw);
             const expected = {
-                roomId: getRoomId(conversation),
+                roomId: getRoomId(data.conversation),
                 userData,
                 body: getBody(data.content, userData.senderId, data.html),
             };
             expect(result).to.be.deep.equal(expected);
         });
-        it('expect getPayload returns senderid with null and no "getUserData" if data have no sender or it\'s null', async () => {
-            const data = {
-                conversation,
-                content: 'content',
-                type: 'RichText',
-            };
+        it('expect getPayload returns correct from image event', async () => {
+            const data = imageEvent.resource;
             const result = await getPayload(data);
-            const userData = await getUserData(data.sender);
+            const userData = await getUserData(data.from.raw);
 
             const expected = {
-                roomId: getRoomId(conversation),
+                roomId: getRoomId(data.conversation),
                 userData,
                 body: getBody(data.content, userData.senderId, data.html),
             };
+            log.debug(result);
             expect(result).to.be.deep.equal(expected);
         });
     });
@@ -236,10 +229,10 @@ describe('Client testing', () => {
             getDisplayNameStub.callsFake().resolves(displayName);
             sendMessageStub.resolves();
 
-            await sendTextToSkype(id, text, data);
+            await sendTextToSkype(id, text, data.sender);
 
             expect(getDisplayNameStub).to.be.calledWithExactly(data.sender);
-            expect(sendMessageStub).to.be.calledWithExactly(b2a(id), {textContent});
+            expect(sendMessageStub).to.be.calledWithExactly({textContent}, b2a(id));
             sendMessageStub.resetHistory();
         });
 

@@ -11,7 +11,7 @@ module.exports = async auth => {
         log.info('starting matrix client');
         const api = await skypeHttp.connect(opts);
         await api.listen();
-        log.debug('setting status online');
+        log.info('setting status online');
         await api.setStatus('Online');
         return api;
     } catch (err) {

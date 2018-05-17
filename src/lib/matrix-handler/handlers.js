@@ -1,14 +1,13 @@
 const log = require('../../modules/log')(module);
-const {a2b, b2a, setRoomAlias, getSkypeMatrixUsers, getRoomName} = require('../../utils');
+const {a2b, b2a, setRoomAlias, getSkypeMatrixUsers, isInviteNewUserEvent} = require('../../utils');
 const config = require('../../config');
 const {domain} = config.bridge;
 const skypeApi = require('../skype-lib/client');
-const {servicePrefix, tagMatrixMessage, isTaggedMatrixMessage, getRoomAlias} = config.clientData;
-
+const {servicePrefix, tagMatrixMessage, getRoomAlias} = config.clientData;
 
 module.exports = state => {
     const {puppet, bridge, skypeClient} = state;
-    const {createSkypeConversation, sendTextToSkype, sendImageToSkype} = skypeApi(state.skypeClient);
+    const {createConversation, sendTextToSkype, sendImageToSkype} = skypeApi(skypeClient);
 
     const getThirdPartyRoomIdFromMatrixRoomId = matrixRoomId => {
         const patt = new RegExp(`^#${servicePrefix}(.+)$`);
@@ -21,7 +20,7 @@ module.exports = state => {
         }, null);
     };
 
-    const invitePuppetUserToSkypeConversation = async (invitedUser, matrixRoomId) => {
+    const inviteUserToSkypeConversation = async (invitedUser, matrixRoomId) => {
         const skypeRoomId = b2a(getThirdPartyRoomIdFromMatrixRoomId(matrixRoomId));
         const contacts = await skypeClient.getContacts();
         const [skypeUser] = getSkypeMatrixUsers(contacts, [invitedUser]);
@@ -32,70 +31,45 @@ module.exports = state => {
     };
 
     return {
-        handleMatrixMemberEvent: data => {
-            const {room_id: matrixRoomId, membership, state_key: invitedUser} = data;
-            const puppetClient = puppet.getClient();
+        handleMatrixMemberEvent: async data => {
+            const {room_id: matrixRoomId, state_key: invitedUser} = data;
+            try {
+                if (!isInviteNewUserEvent(puppet, data)) {
+                    log.debug('ignored a matrix event');
+                    return;
+                }
+                if (puppet.isJoined(matrixRoomId)) {
+                    return inviteUserToSkypeConversation(invitedUser, matrixRoomId);
+                }
 
-            if (membership === 'invite' && invitedUser.includes(`${servicePrefix}`) && invitedUser !== puppetClient.getUserId()) {
                 const bot = bridge.getBot();
                 const botClient = bot.getClient();
-                const isJoined = puppetClient.getRooms()
-                    .find(({roomId}) => roomId === matrixRoomId);
                 const invitedUserIntent = bridge.getIntent(invitedUser);
 
-                if (isJoined) {
-                    return invitePuppetUserToSkypeConversation(invitedUser, matrixRoomId)
-                        .catch(err =>
-                            log.error(err));
-                }
-                const onRoomNameAndUserCollection = async (usersCollection, roomName) => {
-                    const users = Object.keys(usersCollection);
-                    const contacts = await skypeClient.getContacts();
-                    const skypeMatrixUsers = getSkypeMatrixUsers(contacts, users);
-                    const allUsers = {users: skypeMatrixUsers, admins: [skypeClient.getSkypeBotId()]};
-                    return createSkypeConversation({topic: roomName, allUsers});
-                };
+                await invitedUserIntent.join(matrixRoomId);
+                await invitedUserIntent.invite(matrixRoomId, puppet.getUserId());
+                await invitedUserIntent.invite(matrixRoomId, bot.getUserId());
+                await puppet.joinRoom(matrixRoomId);
+                await botClient.joinRoom(matrixRoomId);
 
-
-                return invitedUserIntent.join(matrixRoomId)
-                    .then(() =>
-                        invitedUserIntent.invite(matrixRoomId, puppetClient.getUserId()))
-                    .then(() =>
-                        puppetClient.joinRoom(matrixRoomId))
-                    .then(() =>
-                        invitedUserIntent.invite(matrixRoomId, bot.getUserId()))
-                    .then(() =>
-                        botClient.joinRoom(matrixRoomId))
-                    .then(() =>
-                        getRoomName(matrixRoomId))
-                    .then(roomName =>
-                        bot.getJoinedMembers(matrixRoomId)
-                            .then(usersCollection =>
-                                onRoomNameAndUserCollection(usersCollection, roomName)))
-                    .then(skypeRoomId => {
-                        log.debug('Skype room %s is made', skypeRoomId);
-                        const alias = getRoomAlias(a2b(skypeRoomId));
-                        return setRoomAlias(matrixRoomId, alias);
-                    })
-                    .catch(err =>
-                        log.error(err));
+                const usersCollection = await bot.getJoinedMembers(matrixRoomId);
+                const skypeRoomId = await createConversation(usersCollection, matrixRoomId);
+                const alias = getRoomAlias(a2b(skypeRoomId));
+                return setRoomAlias(matrixRoomId, alias);
+            } catch (err) {
+                log.error(err);
             }
-            return log.debug('ignored a matrix event');
         },
 
         handleMatrixMessageEvent: data => {
             const {room_id: roomId, content: {body, msgtype}} = data;
-            if (isTaggedMatrixMessage(body)) {
-                log.debug('ignoring tagged message, it was sent by the bridge');
-                return;
-            }
             try {
                 const thirdPartyRoomId = getThirdPartyRoomIdFromMatrixRoomId(roomId);
                 switch (msgtype) {
                     case 'm.text': {
                         const msg = tagMatrixMessage(body);
                         log.debug('text message from riot');
-                        return sendTextToSkype(thirdPartyRoomId, msg, data);
+                        return sendTextToSkype(thirdPartyRoomId, msg, data.sender);
                     }
                     case 'm.image': {
                         log.debug('picture message from riot');
@@ -107,7 +81,8 @@ module.exports = state => {
                         }, data);
                     }
                     default:
-                        throw new Error('dont know how to handle this msgtype', msgtype);
+                        log.warn('dont know how to handle this msgtype', msgtype);
+                        return;
                 }
             } catch (err) {
                 log.error('handleMatrixMessageEvent', err);
