@@ -2,7 +2,7 @@ const path = require('path');
 const fs = require('fs');
 
 const log = require('../../modules/log')(module);
-const {getRoomAlias, tagMatrixMessage, getRoomAliasName, getGhostUserFromThirdPartySenderId} = require('../../config').clientData;
+const {getRoomAlias, tagMatrixMessage, getRoomAliasName, getGhostUser} = require('../../config').clientData;
 const {autoTagger, getBufferAndType, getMatrixRoomAlias, getInvitedUsers} = require('../../utils');
 const skypeLib = require('../skype-lib/client');
 
@@ -26,7 +26,7 @@ module.exports = state => {
     };
 
     const getIntentFomSkypeSender = async (userId, name, avatarUrl) => {
-        const ghostIntent = bridge.getIntent(getGhostUserFromThirdPartySenderId(userId));
+        const ghostIntent = bridge.getIntent(getGhostUser(userId));
         const client = ghostIntent.getClient();
 
         const {avatar_url: currentAvatarUrl, displayName} = await ghostIntent.getProfileInfo(client.credentials.userId);
@@ -43,7 +43,7 @@ module.exports = state => {
 
     const getUserClient = async (roomId, userData, doNotTryToGetRemoteUserStoreData) => {
         const {senderId, senderName, avatarUrl} = userData;
-        log.debug('get user client for third party user %s (%s)', senderId, senderName);
+        log.debug('get user client for skype user %s (%s)', senderId, senderName);
 
         if (!senderId) {
             return puppet.getClient();
@@ -88,13 +88,13 @@ module.exports = state => {
 
             return getOrCreateMatrixRoom(skypeRoomId);
         }
-        puppet.saveThirdPartyRoomId(newRoomId, skypeRoomId);
+        puppet.saveRoom(newRoomId, skypeRoomId);
 
         return newRoomId;
     };
 
     const handleSkypeImage = async data => {
-        log.debug('handling third party room image message', data);
+        log.debug('handling skype image message', data);
         const {
             roomId,
             senderName,
@@ -111,7 +111,7 @@ module.exports = state => {
         const matrixRoomId = await getOrCreateMatrixRoom(roomId);
         const client = await getUserClient(matrixRoomId, senderId, senderName, avatarUrl);
         if (!senderId) {
-            log.debug('this message was sent by me, but did it come from a matrix client or a 3rd party client?');
+            log.debug('this message was sent by me, but did it come from a matrix client or a skype client?');
         }
 
         const upload = (buffer, opts) => client.uploadContent(buffer, Object.assign({

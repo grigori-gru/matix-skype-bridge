@@ -6,7 +6,7 @@ const {expect} = chai;
 chai.use(sinonChai);
 const proxyquire = require('proxyquire');
 // const config = require('../../src/config.js');
-const {a2b, b2a, getNameFromId, getAvatarUrl, getTextContent, getBody, getRoomId} = require('../../src/utils');
+const {a2b, getNameFromId, getAvatarUrl, getTextContent, getBody, getRoomId} = require('../../src/utils');
 // const fs = require('fs');
 const writeFileStub = stub();
 const {skypeify} = require('../../src/lib/skype-lib/skypeify');

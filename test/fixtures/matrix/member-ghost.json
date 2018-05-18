@@ -1,0 +1,22 @@
+{
+    "id": "hp8nvbrto0800",
+    "data": {
+        "age": 187,
+        "content": {
+            "avatar_url": "mxc://matrixdev.bingo-boom.ru/DiLcVwbWQinAhKTdCUgQXrfn",
+            "displayname": "gv_grudinin test",
+            "membership": "invite"
+        },
+        "event_id": "$1526655377309pNNeh:matrixdev.bingo-boom.ru",
+        "membership": "invite",
+        "origin_server_ts": 1526655377469,
+        "room_id": "!zefkeiTToGYtRpFYzZ:matrixdev.bingo-boom.ru",
+        "sender": "@gv_grudinin:matrixdev.bingo-boom.ru",
+        "state_key": "@skype_ODpsaXZlOmd2X2dydWRpbmlu:matrixdev.bingo-boom.ru",
+        "type": "m.room.member",
+        "unsigned": {
+            "age": 187
+        },
+        "user_id": "@gv_grudinin:matrixdev.bingo-boom.ru"
+    }
+}

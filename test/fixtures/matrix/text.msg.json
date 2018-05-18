@@ -1,0 +1,16 @@
+{
+    "age": 87,
+    "content": {
+        "body": "1",
+        "msgtype": "m.text"
+    },
+    "event_id": "$1526654803300UBeWK:matrixdev.bingo-boom.ru",
+    "origin_server_ts": 1526654803198,
+    "room_id": "!DmUyncsCEhwyCZMVec:matrixdev.bingo-boom.ru",
+    "sender": "@gv_grudinin:matrixdev.bingo-boom.ru",
+    "type": "m.room.message",
+    "unsigned": {
+        "age": 87
+    },
+    "user_id": "@gv_grudinin:matrixdev.bingo-boom.ru"
+}

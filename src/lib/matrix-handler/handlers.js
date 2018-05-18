@@ -57,18 +57,18 @@ module.exports = state => {
         handleMatrixMessageEvent: data => {
             const {room_id: roomId, content: {body, msgtype}} = data;
             try {
-                const thirdPartyRoomId = getSkypeConversation(roomId);
+                const skypeConversation = getSkypeConversation(roomId);
                 switch (msgtype) {
                     case 'm.text': {
                         const msg = tagMatrixMessage(body);
                         log.debug('text message from riot');
-                        return sendTextToSkype(thirdPartyRoomId, msg, data.sender);
+                        return sendTextToSkype(skypeConversation, msg, data.sender);
                     }
                     case 'm.image': {
                         log.debug('image message from riot');
 
                         const url = puppet.getClient().mxcUrlToHttp(data.content.url);
-                        return sendImageToSkype(thirdPartyRoomId, {
+                        return sendImageToSkype(skypeConversation, {
                             url,
                             text: tagMatrixMessage(body),
                         }, data);

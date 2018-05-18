@@ -18,7 +18,7 @@ const tagMatrixMessage = text => `${text}${deduplicationTag}`;
 const isTaggedMatrixMessage = text => deduplicationTagRegex.test(text);
 const servicePrefix = 'skype_';
 const getRoomAliasName = id => `${servicePrefix}${id}`;
-const getGhostUserFromThirdPartySenderId = id => `@${servicePrefix}${id}:${config.bridge.domain}`;
+const getGhostUser = id => `@${servicePrefix}${id}:${config.bridge.domain}`;
 const getRoomAlias = id =>
     `#${getRoomAliasName(id)}:${config.bridge.domain}`;
 const allowNullSenderName = false;
@@ -30,7 +30,7 @@ const clientData = {
     tagMatrixMessage,
     getRoomAliasName,
     isTaggedMatrixMessage,
-    getGhostUserFromThirdPartySenderId,
+    getGhostUser,
     getRoomAlias,
     allowNullSenderName,
     getSkypeID,

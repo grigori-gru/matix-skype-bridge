@@ -9,7 +9,7 @@ module.exports = class Puppet {
     constructor(jsonFile) {
         this.jsonFile = jsonFile;
         this.client = null;
-        this.thirdPartyRooms = {};
+        this.skypeRooms = {};
     }
 
     /**
@@ -121,12 +121,12 @@ module.exports = class Puppet {
     }
 
     /**
-     * Save a third party room id
+     * Save a skype conversation id
      *
      * @param {string} matrixRoomId matrix room id
-     * @param {string} thirdPartyRoomId third party room id
+     * @param {string} skypeConversationId skype conversation id
      */
-    saveThirdPartyRoomId(matrixRoomId, thirdPartyRoomId) {
-        this.thirdPartyRooms[matrixRoomId] = thirdPartyRoomId;
+    saveRoom(matrixRoomId, skypeConversationId) {
+        this.skypeRooms[matrixRoomId] = skypeConversationId;
     }
 };

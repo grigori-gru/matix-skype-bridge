@@ -1,0 +1,26 @@
+{
+    "age": 821,
+    "content": {
+        "membership": "join"
+    },
+    "event_id": "$1526655378314SySqW:matrixdev.bingo-boom.ru",
+    "membership": "join",
+    "origin_server_ts": 1526655378758,
+    "prev_content": {
+        "membership": "invite"
+    },
+    "replaces_state": "$1526655378312xxfcP:matrixdev.bingo-boom.ru",
+    "room_id": "!zefkeiTToGYtRpFYzZ:matrixdev.bingo-boom.ru",
+    "sender": "@newskypebot:matrixdev.bingo-boom.ru",
+    "state_key": "@newskypebot:matrixdev.bingo-boom.ru",
+    "type": "m.room.member",
+    "unsigned": {
+        "age": 821,
+        "prev_content": {
+            "membership": "invite"
+        },
+        "prev_sender": "@skype_ODpsaXZlOmd2X2dydWRpbmlu:matrixdev.bingo-boom.ru",
+        "replaces_state": "$1526655378312xxfcP:matrixdev.bingo-boom.ru"
+    },
+    "user_id": "@newskypebot:matrixdev.bingo-boom.ru"
+}
