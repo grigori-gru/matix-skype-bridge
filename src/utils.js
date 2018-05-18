@@ -8,9 +8,11 @@ const {AllHtmlEntities: Entities} = require('html-entities');
 const entities = new Entities();
 const log = require('./modules/log')(module);
 const {bridge, puppet, SKYPE_USERS_TO_IGNORE, URL_BASE, clientData} = require('./config.js');
+const {domain} = bridge;
 const {servicePrefix, getSkypeID, tagMatrixMessage} = clientData;
 const {deskypeify} = require('./lib/skype-lib/skypeify');
 
+const patt = new RegExp(`^#${servicePrefix}(.+)$`);
 // // check if tag is right before file extension
 // const FILENAME_TAG_PATTERN = /^.+_mx_\..+$/;
 
@@ -63,7 +65,6 @@ const utils = {
     },
     b2a: str => {
         if (str) {
-            log.debug(str);
             return new Buffer(str, 'base64').toString('ascii');
         }
         log.error('unexpected data for decode');
@@ -120,7 +121,7 @@ const utils = {
         users
             .filter(user => !SKYPE_USERS_TO_IGNORE.includes(user))
             .map(user =>
-                `@${user.split(':').pop()}:${bridge.domain}`),
+                `@${user.split(':').pop()}:${domain}`),
 
     getInvitedUsers: (skypeRoomMembers, matrixRoomMembers) => {
         const result = utils.getMatrixUsers(skypeRoomMembers)
@@ -179,6 +180,17 @@ const utils = {
             body.format = 'org.matrix.custom.html';
         }
         return body;
+    },
+    getSkypeRoomFromAliases: room => {
+        if (!room) {
+            return;
+        }
+        const result = room.getAliases().reduce((result, alias) => {
+            const localpart = alias.replace(`:${domain}`, '');
+            const matches = localpart.match(patt);
+            return matches ? matches[1] : result;
+        }, null);
+        return utils.b2a(result);
     },
 };
 

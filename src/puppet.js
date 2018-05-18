@@ -73,7 +73,7 @@ module.exports = class Puppet {
         }
     }
 
-    isJoined(matrixRoomId) {
+    getMatrixRoomById(matrixRoomId) {
         return this.client.getRooms()
             .find(({roomId}) => roomId === matrixRoomId);
     }

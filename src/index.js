@@ -10,19 +10,19 @@ const Puppet = require('./puppet');
 
 const puppet = new Puppet(path.join(__dirname, './config.json'));
 
-module.exports = async () => {
+module.exports = async function app() {
     log.info('starting matrix client');
     await puppet.startClient();
-
     const skypeClient = await skypeConnect(config.skype);
-    let bridge;
+
+    const handleMatrixEvent = data => matrixEventHandler({puppet, skypeClient, bridge: this.bridge})(data);
     const controller = {
         onUserQuery: queriedUser => {
             log.info('got user query', queriedUser);
             // auto provision users w no additional data
             return {};
         },
-        onEvent: matrixEventHandler({puppet, skypeClient, bridge}),
+        onEvent: handleMatrixEvent,
         onAliasQuery: () => {
             log.info('on alias query');
         },
@@ -33,10 +33,11 @@ module.exports = async () => {
             getUser: () => log.info('get user'),
         },
     };
-    bridge = new Bridge({...config.bridge, controller});
 
-    await bridge.run(config.port, config);
+    this.bridge = new Bridge({...config.bridge, controller});
 
-    skypeClient.on('event', skypeEventHandler({bridge, puppet, skypeClient}));
+    await this.bridge.run(config.port, config);
+
+    skypeClient.on('event', skypeEventHandler({bridge: this.bridge, puppet, skypeClient}));
     skypeClient.on('error', skypeErrorHandler);
 };

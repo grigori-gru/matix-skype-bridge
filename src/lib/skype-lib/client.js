@@ -39,7 +39,7 @@ module.exports = api => {
         const skypeRoomId = await api.createConversation(allUsers);
         await api.setConversationTopic(skypeRoomId, roomName);
         log.debug('Skype room %s is made', skypeRoomId);
-        return skypeRoomId;
+        return a2b(skypeRoomId);
     };
 
     return {
@@ -67,7 +67,7 @@ module.exports = api => {
             try {
                 const displayName = await getDisplayName(sender);
                 const textContent = skypeify(getTextContent(displayName, text));
-                await api.sendMessage({textContent}, b2a(id));
+                await api.sendMessage({textContent}, id);
             } catch (error) {
                 throw new Error(error);
             }

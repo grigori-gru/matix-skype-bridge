@@ -25,7 +25,7 @@ module.exports = state => {
         return ghostIntent.setAvatarUrl(contentUri);
     };
 
-    const getIntentFromThirdPartySenderId = async (userId, name, avatarUrl) => {
+    const getIntentFomSkypeSender = async (userId, name, avatarUrl) => {
         const ghostIntent = bridge.getIntent(getGhostUserFromThirdPartySenderId(userId));
         const client = ghostIntent.getClient();
 
@@ -50,7 +50,7 @@ module.exports = state => {
         }
 
         log.debug('this message was not sent by me');
-        const ghostIntent = await getIntentFromThirdPartySenderId(senderId, senderName, avatarUrl);
+        const ghostIntent = await getIntentFomSkypeSender(senderId, senderName, avatarUrl);
         await ghostIntent.join(roomId);
 
         return ghostIntent.getClient();

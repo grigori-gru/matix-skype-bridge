@@ -232,7 +232,7 @@ describe('Client testing', () => {
             await sendTextToSkype(id, text, data.sender);
 
             expect(getDisplayNameStub).to.be.calledWithExactly(data.sender);
-            expect(sendMessageStub).to.be.calledWithExactly({textContent}, b2a(id));
+            expect(sendMessageStub).to.be.calledWithExactly({textContent}, id);
             sendMessageStub.resetHistory();
         });
 
