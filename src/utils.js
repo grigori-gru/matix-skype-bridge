@@ -61,13 +61,13 @@ const utils = {
         if (str) {
             return new Buffer(str).toString('base64');
         }
-        log.error('unexpected data for decode');
+        log.warn('unexpected data for decode');
     },
     b2a: str => {
         if (str) {
             return new Buffer(str, 'base64').toString('ascii');
         }
-        log.error('unexpected data for decode');
+        log.warn('unexpected data for decode');
     },
 
     getMatrixRoomAlias: skypeConverstaion => utils.a2b(skypeConverstaion),
@@ -181,11 +181,12 @@ const utils = {
         }
         return body;
     },
-    getSkypeRoomFromAliases: room => {
-        if (!room) {
+
+    getSkypeRoomFromAliases: aliases => {
+        if (!aliases) {
             return;
         }
-        const result = room.getAliases().reduce((result, alias) => {
+        const result = aliases.reduce((result, alias) => {
             const localpart = alias.replace(`:${domain}`, '');
             const matches = localpart.match(patt);
             return matches ? matches[1] : result;

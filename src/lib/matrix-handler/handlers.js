@@ -10,7 +10,7 @@ module.exports = state => {
 
     const getSkypeConversation = matrixRoomId => {
         const room = puppet.getMatrixRoomById(matrixRoomId);
-        return getSkypeRoomFromAliases(room);
+        return getSkypeRoomFromAliases(room.getAliases());
     };
 
     const inviteUserToSkypeConversation = async (invitedUser, skypeConversation) => {

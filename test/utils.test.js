@@ -1,7 +1,8 @@
 const nock = require('nock');
 const {expect} = require('chai');
-const {getDisplayName, a2b, getSkypeMatrixUsers, getRoomName, getIdFromMatrix, getId, getMatrixUsers, getNameToSkype} = require('../src/utils');
-const {puppet, bridge} = require('../src/config.js');
+const {getSkypeRoomFromAliases, getDisplayName, a2b, getSkypeMatrixUsers, getRoomName, getIdFromMatrix, getId, getMatrixUsers, getNameToSkype} = require('../src/utils');
+const {puppet, bridge, clientData} = require('../src/config.js');
+const {servicePrefix, getSkypeID, tagMatrixMessage} = clientData;
 
 describe('Utils test', () => {
     const sender = '@senderName:mvs';
@@ -88,5 +89,47 @@ describe('Utils test', () => {
             '8:live:hijk',
         ];
         expect(result).to.deep.equal(expected);
+    });
+
+    it('Test getSkypeMatrixUsers', () => {
+        const clientCollection = [
+            {personId: '8:live:skypebottest_2'},
+            {personId: '8:live:abcdefg'},
+            {personId: '8:live:hijk'},
+        ];
+        const users = [
+            `@skype_${a2b('8:live:skypebottest_2')}:${bridge.domain}`,
+            `@skype_${a2b('8:live:abcdefg')}:${bridge.domain}`,
+            `@skype_${a2b('8:live:hijk')}:${bridge.domain}`,
+        ];
+        const result = getSkypeMatrixUsers(clientCollection, users);
+        const expected = [
+            '8:live:skypebottest_2',
+            '8:live:abcdefg',
+            '8:live:hijk',
+        ];
+        expect(result).to.deep.equal(expected);
+    });
+    describe('Test getSkypeMatrixUsers', () => {
+        const roomAliases = [
+            `#${a2b('failAlias')}:${bridge.domain}`,
+            `#${a2b('failAlias2')}:${bridge.domain}`,
+        ];
+        it('Expect getSkypeMatrixUsers return alias name for correct alias', () => {
+            const expected = 'correctAlias';
+            const expectedAlias = `#${servicePrefix}${a2b(expected)}:${bridge.domain}`;
+            const result = getSkypeRoomFromAliases([...roomAliases, expectedAlias]);
+            expect(result).to.deep.equal(expected);
+        });
+        it('Expect getSkypeMatrixUsers return nothing if no alias match pattern', () => {
+            const result = getSkypeRoomFromAliases(roomAliases);
+            expect(result).not.to.be;
+        });
+        it('Expect getSkypeMatrixUsers return nothing if no alias or empty array as argument we get', () => {
+            const result = getSkypeRoomFromAliases(null);
+            expect(result).not.to.be;
+            const result1 = getSkypeRoomFromAliases([]);
+            expect(result1).not.to.be;
+        });
     });
 });
