@@ -6,73 +6,31 @@ const fetch = require('node-fetch');
 const querystring = require('querystring');
 const {AllHtmlEntities: Entities} = require('html-entities');
 const entities = new Entities();
-
 const log = require('./modules/log')(module);
-const {bridge, puppet, SKYPE_USERS_TO_IGNORE} = require('./config.js');
+const {bridge, puppet, SKYPE_USERS_TO_IGNORE, URL_BASE, clientData} = require('./config.js');
+const {domain} = bridge;
+const {servicePrefix, getSkypeID, tagMatrixMessage} = clientData;
+const {deskypeify} = require('./lib/skype-lib/skypeify');
 
-const a2b = str => new Buffer(str).toString('base64');
-const b2a = str => new Buffer(str, 'base64').toString('ascii');
-const URL_BASE = `${bridge.homeserverUrl}/_matrix/client/r0`;
+const patt = new RegExp(`^#${servicePrefix}(.+)$`);
+// // check if tag is right before file extension
+// const FILENAME_TAG_PATTERN = /^.+_mx_\..+$/;
 
-const setRoomAlias = (roomId, alias) => {
-    const encodeAlias = encodeURIComponent(alias);
-    const query = querystring.stringify({'access_token': puppet.token});
-    const url = `${URL_BASE}/directory/room/${encodeAlias}?${query}`;
-    const body = {'room_id': roomId};
-    return fetch(url, {
-        method: 'PUT',
-        body: JSON.stringify(body),
-        headers: {'Content-Type': 'application/json'},
-    })
-        .then(res => {
-            log.debug('Request for setting alias name %s for room %s in matrix have status %s ', alias, roomId, res.status);
-        });
-};
+// const isFilenameTagged = filepath => !!filepath.match(FILENAME_TAG_PATTERN);
 
-const getDisplayName = matrixId => {
-    const encodeSender = encodeURIComponent(matrixId);
-    const url = `${URL_BASE}/profile/${encodeSender}/displayname`;
-    return fetch(url)
-        .then(body =>
-            (body.status === 200 ? body.json() : null))
-        .then(res =>
-            (res ? res.displayname : res));
-};
+// tag the message to know it was sent by the bridge
+const autoTagger = (sender, func) => text =>
+    (sender ? text : func(text));
 
-const getNameToSkype = sender =>
-    getDisplayName(sender)
-        .then(displayname => {
-            const result = displayname || sender;
-            log.debug('Display name for user %s in skype is %s', sender, result);
-            return result;
-        });
-
-const getRoomName = roomId => {
-    const query = querystring.stringify({'access_token': puppet.token});
-    const url = `${URL_BASE}/rooms/${roomId}/state/m.room.name?${query}`;
-    return fetch(url)
-        .then(res => res.json())
-        .then(({name}) => {
-            const result = name || 'Bingo-boom conversation';
-            log.debug('Display name for roomId %s in skype is %s', roomId, result);
-            return result;
-        });
-};
-
-const getMatrixUsers = users =>
-    users
-        .filter(user => !SKYPE_USERS_TO_IGNORE.includes(user))
-        .map(user =>
-            `@${user.split(':').pop()}:${bridge.domain}`);
-
-const downloadGetStream = (url, data) => needle.get(url, data);
+const tag = (text = '', sender) =>
+    autoTagger(sender, tagMatrixMessage)(deskypeify(text));
 
 const downloadGetBufferAndHeaders = (url, data) =>
     new Promise((resolve, reject) => {
         let headers = {
             'content-type': 'application/octet-stream',
         };
-        const stream = downloadGetStream(url, data);
+        const stream = needle.get(url, data);
         stream.on('header', (_s, _h) => {
             headers = _h;
         });
@@ -81,63 +39,166 @@ const downloadGetBufferAndHeaders = (url, data) =>
         })).on('error', reject);
     });
 
-const downloadGetBufferAndType = (url, data) =>
-    downloadGetBufferAndHeaders(url, data)
-        .then(({buffer, headers}) => {
-            let type;
-            const contentType = headers['content-type'];
-            if (contentType) {
-                type = contentType;
-            } else {
-                type = mime.lookup(urlParse(url).pathname);
-            }
-            [type] = type.split(';');
-            return {buffer, type};
-        });
-
-
-const getIdFromMatrix = (user, prefix = '') => {
-    const [result] = user.replace(`@${prefix}`, '').split(':');
-    return result;
+const getUrl = (arg, type) => {
+    const encodeArg = encodeURIComponent(arg);
+    const result = {
+        setRoomUrl: `${URL_BASE}/directory/room/${encodeArg}?${querystring.stringify({'access_token': puppet.token})}`,
+        getDisplayUrl: `${URL_BASE}/profile/${encodeArg}/displayname`,
+    };
+    return result[type];
 };
 
-const getId = (user, func) => {
-    const prefix = 'skype_';
-    return user.includes(prefix) ? func(getIdFromMatrix(user, prefix)) : `8:live:${getIdFromMatrix(user)}`;
-};
+const utils = {
+    isInviteNewUserEvent: (puppetId, {membership, state_key: invitedUser}) =>
+        (membership === 'invite' && invitedUser.includes(`${servicePrefix}`) && invitedUser !== puppetId),
 
-const getSkypeMatrixUsers = (skypeCollection = [], matrixRoomUsers) => {
-    const usersIds = matrixRoomUsers.map(user => getId(user, b2a));
-    return skypeCollection
-        .map(({personId}) => personId)
-        .filter(id => usersIds.includes(id));
-};
+    isTypeErrorMessage: err =>
+        ['ressource.messageType', 'EventMessage.resourceType'].reduce((acc, val) =>
+            acc || err.stack.includes(val), false),
 
-// tag the message to know it was sent by the bridge
-const autoTagger = (senderId, func) => (text = '') =>
-    (senderId ? text : func(text));
+    getTextContent: (name, text) => `${name}:\n${text}`,
 
-// check if tag is right before file extension
-const FILENAME_TAG_PATTERN = /^.+_mx_\..+$/;
+    isSkypeId: id => id.includes(':'),
 
-const isFilenameTagged = filepath => !!filepath.match(FILENAME_TAG_PATTERN);
+    getNameFromId: id => id.substr(id.indexOf(':') + 1),
 
-module.exports = {
-    isFilenameTagged,
-    autoTagger,
-    getDisplayName,
-    a2b,
-    b2a,
-    getSkypeMatrixUsers,
-    getIdFromMatrix,
-    getId,
-    getMatrixUsers,
-    getNameToSkype,
-    getRoomName,
-    setRoomAlias,
-    download: {
-        getStream: downloadGetStream,
-        getBufferAndType: downloadGetBufferAndType,
+    getAvatarUrl: id => `https://avatars.skype.com/v1/avatars/${entities.encode(utils.getNameFromId(id))}/public?returnDefaultImage=false&cacheHeaders=true`,
+
+    a2b: str => {
+        if (str) {
+            return new Buffer(str).toString('base64');
+        }
+        log.warn('unexpected data for decode');
     },
-    entities,
+    b2a: str => {
+        if (str) {
+            return new Buffer(str, 'base64').toString('ascii');
+        }
+        log.warn('unexpected data for decode');
+    },
+
+    getMatrixRoomAlias: skypeConverstaion => utils.a2b(skypeConverstaion),
+
+    setRoomAlias: (roomId, alias) => {
+        const url = getUrl(alias, 'setRoomUrl');
+        const body = {'room_id': roomId};
+        log.debug('roomId', roomId);
+        return fetch(url, {
+            method: 'PUT',
+            body: JSON.stringify(body),
+            headers: {'Content-Type': 'application/json'},
+        })
+            .then(res => {
+                log.debug('Request for setting alias name %s for room %s in matrix have status %s ', alias, roomId, res.status);
+                return res.status;
+            });
+    },
+
+    getDisplayName: matrixId => {
+        const url = getUrl(matrixId, 'getDisplayUrl');
+        return fetch(url)
+            .then(body =>
+                (body.status === 200 ? body.json() : null))
+            .then(res =>
+                (res ? res.displayname : res));
+    },
+
+    getNameToSkype: sender =>
+        utils.getDisplayName(sender)
+            .then(displayname => {
+                const result = displayname || sender;
+                log.debug('Display name for user %s in skype is %s', sender, result);
+                return result;
+            }),
+
+    getRoomName: roomId => {
+        const query = querystring.stringify({'access_token': puppet.token});
+        const url = `${URL_BASE}/rooms/${roomId}/state/m.room.name?${query}`;
+        return fetch(url)
+            .then(res => res.json())
+            .then(({name}) => {
+                const result = name || 'Bingo-boom conversation';
+                log.debug('Display name for roomId %s in skype is %s', roomId, result);
+                return result;
+            });
+    },
+
+    getMatrixUsers: users =>
+        users
+            .filter(user => !SKYPE_USERS_TO_IGNORE.includes(user))
+            .map(user =>
+                `@${user.split(':').pop()}:${domain}`),
+
+    getInvitedUsers: (skypeRoomMembers, matrixRoomMembers) => {
+        const result = utils.getMatrixUsers(skypeRoomMembers)
+            .filter(user => !matrixRoomMembers.includes(user));
+        return result.length > 0 ? result : null;
+    },
+
+    getBufferAndType: (url, data) =>
+        downloadGetBufferAndHeaders(url, data)
+            .then(({buffer, headers}) => {
+                let type;
+                const contentType = headers['content-type'];
+                if (contentType) {
+                    type = contentType;
+                } else {
+                    type = mime.lookup(urlParse(url).pathname);
+                }
+                [type] = type.split(';');
+                return {buffer, type};
+            }),
+
+
+    getIdFromMatrix: (user, prefix = '') => {
+        const [result] = user.replace(`@${prefix}`, '').split(':');
+        return result;
+    },
+
+    getId: user =>
+        (user.includes(servicePrefix) ?
+            utils.b2a(utils.getIdFromMatrix(user, servicePrefix)) :
+            getSkypeID(utils.getIdFromMatrix(user))),
+
+    getSkypeMatrixUsers: (skypeCollection = [], matrixRoomUsers) => {
+        const usersIds = matrixRoomUsers.map(user => utils.getId(user));
+        return skypeCollection
+            .map(({personId}) => personId)
+            .filter(id => usersIds.includes(id));
+    },
+
+    // TODO: it's outdated now
+    // isMatrixMessage: content => isTaggedMatrixMessage(deskypeify(content)),
+
+    // isMatrixImage: ({original_file_name: name, path}) =>
+    //     (isTaggedMatrixMessage(name) || isFilenameTagged(path)),
+
+    getRoomId: conversation => utils.a2b(conversation).replace(':', '^'),
+
+    getBody: (content, senderId, html) => {
+        const body = {
+            body: tag(content, senderId),
+            msgtype: 'm.text',
+        };
+        // if (html) {
+        //     // eslint-disable-next-line
+        //     body.formatted_body = html;
+        //     body.format = 'org.matrix.custom.html';
+        // }
+        return body;
+    },
+
+    getSkypeRoomFromAliases: aliases => {
+        if (!aliases) {
+            return;
+        }
+        const result = aliases.reduce((result, alias) => {
+            const localpart = alias.replace(`:${domain}`, '');
+            const matches = localpart.match(patt);
+            return matches ? matches[1] : result;
+        }, null);
+        return utils.b2a(result);
+    },
 };
+
+module.exports = utils;

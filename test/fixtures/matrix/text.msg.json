@@ -1,0 +1,19 @@
+{
+    "id": "hp8nvbrto0800",
+    "data": {
+        "age": 87,
+        "content": {
+            "body": "1",
+            "msgtype": "m.text"
+        },
+        "event_id": "$1526654803300UBeWK:test.domain",
+        "origin_server_ts": 1526654803198,
+        "room_id": "!DmUyncsCEhwyCZMVec:test.domain",
+        "sender": "@gv_grudinin:test.domain",
+        "type": "m.room.message",
+        "unsigned": {
+            "age": 87
+        },
+        "user_id": "@gv_grudinin:test.domain"
+    }
+}

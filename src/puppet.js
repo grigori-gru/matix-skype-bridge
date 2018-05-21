@@ -9,7 +9,7 @@ module.exports = class Puppet {
     constructor(jsonFile) {
         this.jsonFile = jsonFile;
         this.client = null;
-        this.thirdPartyRooms = {};
+        this.skypeRooms = {};
     }
 
     /**
@@ -17,26 +17,25 @@ module.exports = class Puppet {
      *
      * @returns {Promise} Returns a promise resolving the MatrixClient
      */
-    startClient() {
-        return matrixSdk.createClient({
+    async startClient() {
+        const _matrixClient = await matrixSdk.createClient({
             baseUrl: config.bridge.homeserverUrl,
             userId: config.puppet.id,
             accessToken: config.puppet.token,
-        }).then(_matrixClient => {
-            this.client = _matrixClient;
-            this.client.startClient();
-            return new Promise((resolve, _reject) => {
-                this.matrixRoomMembers = {};
-                this.client.on('RoomState.members', (event, state, _member) => {
-                    this.matrixRoomMembers[state.roomId] = Object.keys(state.members);
-                });
+        });
+        this.client = _matrixClient;
+        this.client.startClient();
+        return new Promise((resolve, _reject) => {
+            this.matrixRoomMembers = {};
+            this.client.on('RoomState.members', (event, state, _member) => {
+                this.matrixRoomMembers[state.roomId] = Object.keys(state.members);
+            });
 
-                this.client.on('sync', state => {
-                    if (state === 'PREPARED') {
-                        log.info('synced');
-                        resolve();
-                    }
-                });
+            this.client.on('sync', state => {
+                if (state === 'PREPARED') {
+                    log.info('synced');
+                    resolve();
+                }
             });
         });
     }
@@ -51,6 +50,10 @@ module.exports = class Puppet {
         return this.matrixRoomMembers[roomId] || [];
     }
 
+    getUserId() {
+        return this.client.credentials.userId;
+    }
+
     /**
      * Returns the MatrixClient
      *
@@ -58,6 +61,43 @@ module.exports = class Puppet {
      */
     getClient() {
         return this.client;
+    }
+
+    async getRoom(roomAlias) {
+        try {
+            const {room_id: roomId} = await this.client.getRoomIdForAlias(roomAlias);
+            log.debug('found matrix room via alias. room_id:', roomId);
+
+            return roomId;
+        } catch (err) {
+            log.debug('the room doesn\'t exist. we need to create it for the first time');
+        }
+    }
+
+    getMatrixRoomById(matrixRoomId) {
+        return this.client.getRooms()
+            .find(({roomId}) => roomId === matrixRoomId);
+    }
+
+
+    async joinRoom(room) {
+        try {
+            await this.client.joinRoom(room);
+            return;
+        } catch (err) {
+            if (err.message === 'No known servers') {
+                log.warn('we cannot use this room anymore because you cannot currently rejoin an empty room (synapse limitation? riot throws this error too). we need to de-alias it now so a new room gets created that we can actually use.');
+
+                return err.message;
+            }
+            log.warn('ignoring error from puppet join room: ', err.message);
+        }
+    }
+
+    invite(roomId, users) {
+        return Promise.all(users.map(user =>
+            this.client.invite(roomId, user)
+                .then(() => log.debug('New user %s invited to room %s', user, roomId))));
     }
 
     async associate() {
@@ -83,12 +123,12 @@ module.exports = class Puppet {
     }
 
     /**
-     * Save a third party room id
+     * Save a skype conversation id
      *
      * @param {string} matrixRoomId matrix room id
-     * @param {string} thirdPartyRoomId third party room id
+     * @param {string} skypeConversationId skype conversation id
      */
-    saveThirdPartyRoomId(matrixRoomId, thirdPartyRoomId) {
-        this.thirdPartyRooms[matrixRoomId] = thirdPartyRoomId;
+    saveRoom(matrixRoomId, skypeConversationId) {
+        this.skypeRooms[matrixRoomId] = skypeConversationId;
     }
 };

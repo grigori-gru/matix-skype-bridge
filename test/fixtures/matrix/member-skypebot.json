@@ -1,0 +1,35 @@
+{
+    "id": "eujxwmepyjc00",
+    "data": {
+        "age": 403,
+        "content": {
+            "avatar_url": null,
+            "displayname": "skypebot",
+            "membership": "join"
+        },
+        "event_id": "$1526655378313BZZBo:test.domain",
+        "membership": "join",
+        "origin_server_ts": 1526655378407,
+        "prev_content": {
+            "avatar_url": null,
+            "displayname": "skypebot",
+            "membership": "invite"
+        },
+        "replaces_state": "$1526655377311gnThw:test.domain",
+        "room_id": "!zefkeiTToGYtRpFYzZ:test.domain",
+        "sender": "@skypebot:test.domain",
+        "state_key": "@skypebot:test.domain",
+        "type": "m.room.member",
+        "unsigned": {
+            "age": 403,
+            "prev_content": {
+                "avatar_url": null,
+                "displayname": "skypebot",
+                "membership": "invite"
+            },
+            "prev_sender": "@skype_ODpsaXZlOmd2X2dydWRpbmlu:test.domain",
+            "replaces_state": "$1526655377311gnThw:test.domain"
+        },
+        "user_id": "@skypebot:test.domain"
+    }
+}

@@ -1,7 +1,6 @@
 const path = require('path');
 
 const env = process.env.NODE_ENV || 'development';
-const log = require('./modules/log')(module);
 
 const configPath = {
     development: './',
@@ -9,7 +8,6 @@ const configPath = {
 };
 
 const confgigFilepath = path.resolve(configPath[env], 'config.json');
-log.debug(confgigFilepath);
 
 const config = require(confgigFilepath);
 
@@ -18,21 +16,26 @@ const deduplicationTagRegex = new RegExp(config.deduplicationTagPattern || ' \\u
 
 const tagMatrixMessage = text => `${text}${deduplicationTag}`;
 const isTaggedMatrixMessage = text => deduplicationTagRegex.test(text);
-const servicePrefix = 'skype';
-const getRoomAliasLocalPartFromThirdPartyRoomId = id => `${servicePrefix}_${id}`;
-const getGhostUserFromThirdPartySenderId = id => `@${servicePrefix}_${id}:${config.domain}`;
-const getRoomAliasFromThirdPartyRoomId = id => `#${getRoomAliasLocalPartFromThirdPartyRoomId(id)}:${config.domain}`;
+const servicePrefix = 'skype_';
+const getRoomAliasName = id => `${servicePrefix}${id}`;
+const getGhostUser = id => `@${servicePrefix}${id}:${config.bridge.domain}`;
+const getRoomAlias = id =>
+    `#${getRoomAliasName(id)}:${config.bridge.domain}`;
 const allowNullSenderName = false;
+
+const getSkypeID = name => `8:live:${name}`;
+
 const clientData = {
     servicePrefix,
     tagMatrixMessage,
-    getRoomAliasLocalPartFromThirdPartyRoomId,
+    getRoomAliasName,
     isTaggedMatrixMessage,
-    getGhostUserFromThirdPartySenderId,
-    getRoomAliasFromThirdPartyRoomId,
+    getGhostUser,
+    getRoomAlias,
     allowNullSenderName,
+    getSkypeID,
 };
 
-const tmpPath = path.resolve(__dirname, '..', 'tmp');
+const URL_BASE = `${config.bridge.homeserverUrl}/_matrix/client/r0`;
 
-module.exports = ({...config, clientData, tmpPath});
+module.exports = ({...config, clientData, URL_BASE});

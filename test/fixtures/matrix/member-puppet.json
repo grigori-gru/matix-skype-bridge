@@ -1,0 +1,29 @@
+{
+    "id": "eujxwmepyjc00",
+    "data": {
+        "age": 821,
+        "content": {
+            "membership": "join"
+        },
+        "event_id": "$1526655378314SySqW:test.domain",
+        "membership": "join",
+        "origin_server_ts": 1526655378758,
+        "prev_content": {
+            "membership": "invite"
+        },
+        "replaces_state": "$1526655378312xxfcP:test.domain",
+        "room_id": "!zefkeiTToGYtRpFYzZ:test.domain",
+        "sender": "@newskypebot:test.domain",
+        "state_key": "@newskypebot:test.domain",
+        "type": "m.room.member",
+        "unsigned": {
+            "age": 821,
+            "prev_content": {
+                "membership": "invite"
+            },
+            "prev_sender": "@skype_ODpsaXZlOmd2X2dydWRpbmlu:test.domain",
+            "replaces_state": "$1526655378312xxfcP:test.domain"
+        },
+        "user_id": "@newskypebot:test.domain"
+    }
+}

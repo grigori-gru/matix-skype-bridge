@@ -6,7 +6,9 @@
     "scripts": {
         "start": "node index.js",
         "lint": "eslint .",
-        "test": "NODE_ENV=test nyc mocha test/* --exit"
+        "test": "NODE_ENV=test nyc mocha test/* --exit",
+        "report": "NODE_ENV=test nyc report --reporter=html mocha test/* --exit",
+        "report-coverage": "nyc report --reporter=text-lcov > coverage.lcov && codecov"
     },
     "repository": {
         "type": "git",
@@ -23,6 +25,10 @@
         "url": "https://github.com/grigori-gru/matix-skype-bridge/issues"
     },
     "homepage": "https://github.com/grigori-gru/matix-skype-bridge#readme",
+    "pre-commit": [
+        "lint",
+        "test"
+      ],
     "dependencies": {
         "readline-sync": "*",
         "matrix-appservice-bridge": "*",
@@ -37,15 +43,17 @@
         "winston-daily-rotate-file": "^1.7.2"
     },
     "devDependencies": {
-        "sinon-chai": "*",
         "chai": "*",
         "chai-http": "*",
         "eslint": "*",
         "eslint-config-google": "*",
+        "eslint-plugin-chai-friendly": "^0.4.1",
         "mocha": "*",
         "nock": "*",
         "nyc": "*",
+        "pre-commit": "^1.2.2",
         "proxyquire": "*",
-        "sinon": "*"
+        "sinon": "*",
+        "sinon-chai": "*"
     }
 }

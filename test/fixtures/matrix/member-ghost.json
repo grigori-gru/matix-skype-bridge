@@ -1,0 +1,22 @@
+{
+    "id": "hp8nvbrto0800",
+    "data": {
+        "age": 187,
+        "content": {
+            "avatar_url": "mxc://test.domain/DiLcVwbWQinAhKTdCUgQXrfn",
+            "displayname": "gv_grudinin test",
+            "membership": "invite"
+        },
+        "event_id": "$1526655377309pNNeh:test.domain",
+        "membership": "invite",
+        "origin_server_ts": 1526655377469,
+        "room_id": "!zefkeiTToGYtRpFYzZ:test.domain",
+        "sender": "@gv_grudinin:test.domain",
+        "state_key": "@skype_ODpsaXZlOmd2X2dydWRpbmlu:test.domain",
+        "type": "m.room.member",
+        "unsigned": {
+            "age": 187
+        },
+        "user_id": "@gv_grudinin:test.domain"
+    }
+}
