@@ -121,6 +121,7 @@ describe('Integ matrix handler test', () => {
         const expectedText = {textContent: getTextContent(getDisplayName(textEventData.sender), text)};
         expect(sendMessageStub).to.be.calledWithExactly(expectedText, expectedRoom);
     });
+
     it('Expect undefined returns if no data we get', async () => {
         const msgtype = 'unexpected';
         const messageData = {
