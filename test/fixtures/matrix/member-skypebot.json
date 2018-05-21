@@ -7,7 +7,7 @@
             "displayname": "skypebot",
             "membership": "join"
         },
-        "event_id": "$1526655378313BZZBo:matrixdev.bingo-boom.ru",
+        "event_id": "$1526655378313BZZBo:test.domain",
         "membership": "join",
         "origin_server_ts": 1526655378407,
         "prev_content": {
@@ -15,10 +15,10 @@
             "displayname": "skypebot",
             "membership": "invite"
         },
-        "replaces_state": "$1526655377311gnThw:matrixdev.bingo-boom.ru",
-        "room_id": "!zefkeiTToGYtRpFYzZ:matrixdev.bingo-boom.ru",
-        "sender": "@skypebot:matrixdev.bingo-boom.ru",
-        "state_key": "@skypebot:matrixdev.bingo-boom.ru",
+        "replaces_state": "$1526655377311gnThw:test.domain",
+        "room_id": "!zefkeiTToGYtRpFYzZ:test.domain",
+        "sender": "@skypebot:test.domain",
+        "state_key": "@skypebot:test.domain",
         "type": "m.room.member",
         "unsigned": {
             "age": 403,
@@ -27,9 +27,9 @@
                 "displayname": "skypebot",
                 "membership": "invite"
             },
-            "prev_sender": "@skype_ODpsaXZlOmd2X2dydWRpbmlu:matrixdev.bingo-boom.ru",
-            "replaces_state": "$1526655377311gnThw:matrixdev.bingo-boom.ru"
+            "prev_sender": "@skype_ODpsaXZlOmd2X2dydWRpbmlu:test.domain",
+            "replaces_state": "$1526655377311gnThw:test.domain"
         },
-        "user_id": "@skypebot:matrixdev.bingo-boom.ru"
+        "user_id": "@skypebot:test.domain"
     }
 }

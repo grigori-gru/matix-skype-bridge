@@ -207,14 +207,11 @@ describe('Client testing', () => {
     //     await sendImageToSkype(id, data);
 
     //     const expectedMessage = {
-    //         file: config.tmpPath,
     //         name: data.text,
     //     };
     //     const expectedConversationId = b2a(id);
-    //     const files = fs.readdirSync(config.tmpPath);
     //     expect(writeFileStub).not.to.be.called;
     //     expect(sendImageStub).to.be.calledWithExactly(expectedMessage, expectedConversationId);
-    //     expect(files).to.be.empty;
     // });
 
     describe('sendTextToSkype test', () => {
@@ -226,12 +223,10 @@ describe('Client testing', () => {
             };
             const displayName = `${data.sender}DisplayName`;
             const textContent = skypeify(getTextContent(displayName, text));
-            getDisplayNameStub.callsFake().resolves(displayName);
             sendMessageStub.resolves();
 
-            await sendTextToSkype(id, text, data.sender);
+            await sendTextToSkype(id, text, displayName);
 
-            expect(getDisplayNameStub).to.be.calledWithExactly(data.sender);
             expect(sendMessageStub).to.be.calledWithExactly({textContent}, id);
             sendMessageStub.resetHistory();
         });
@@ -242,7 +237,6 @@ describe('Client testing', () => {
             const data = {
                 sender: 'sender',
             };
-            getDisplayNameStub.callsFake().throws();
             try {
                 await sendTextToSkype(id, text, data);
             } catch (err) {

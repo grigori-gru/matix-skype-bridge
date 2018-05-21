@@ -1,8 +1,12 @@
 const nock = require('nock');
 const {expect} = require('chai');
-const {getSkypeRoomFromAliases, getDisplayName, a2b, getSkypeMatrixUsers, getRoomName, getIdFromMatrix, getId, getMatrixUsers, getNameToSkype} = require('../src/utils');
-const {puppet, bridge, clientData} = require('../src/config.js');
-const {servicePrefix, getSkypeID, tagMatrixMessage} = clientData;
+const {setRoomAlias, isInviteNewUserEvent, isTypeErrorMessage, getSkypeRoomFromAliases, getDisplayName, a2b, getSkypeMatrixUsers, getRoomName, getIdFromMatrix, getId, getMatrixUsers, getNameToSkype} = require('../src/utils');
+const {puppet, bridge, clientData, URL_BASE} = require('../src/config.js');
+const {servicePrefix, getRoomAlias} = clientData;
+const {data: ghostEventData} = require('./fixtures/matrix/member-ghost.json');
+const {data: puppetEventData} = require('./fixtures/matrix/member-puppet.json');
+const {data: skypebotEventData} = require('./fixtures/matrix/member-skypebot.json');
+
 
 describe('Utils test', () => {
     const sender = '@senderName:mvs';
@@ -11,11 +15,11 @@ describe('Utils test', () => {
 
     // eslint-disable-next-line
     before(() => {
-        nock(bridge.homeserverUrl)
-            .get(`/_matrix/client/r0/profile/${encodeURIComponent(sender)}/displayname`)
+        nock(URL_BASE)
+            .get(`/profile/${encodeURIComponent(sender)}/displayname`)
             .times(2)
             .reply(200, {displayname: expectedData})
-            .get(`/_matrix/client/r0/rooms/${roomId}/state/m.room.name`)
+            .get(`/rooms/${roomId}/state/m.room.name`)
             .query({'access_token': puppet.token})
             .reply(200, {name: expectedData});
     });
@@ -130,6 +134,80 @@ describe('Utils test', () => {
             expect(result).not.to.be;
             const result1 = getSkypeRoomFromAliases([]);
             expect(result1).not.to.be;
+        });
+    });
+
+    describe('Error exeption test', () => {
+        const errMsg1 = new Error(`poll: An error happened while processing the polled messages
+            caused by Error: Unknown ressource.messageType ("ThreadActivity/AddMember") for resource:`);
+        const errMsg2 = new Error(` poll: An error happened while processing the polled messages
+            caused by Error: Unknown EventMessage.resourceType ("ThreadUpdate") for Event:`);
+        it('expect isTypeErrorMessage return true', () => {
+            const result = isTypeErrorMessage(errMsg1);
+            expect(result).to.be.true;
+            const result1 = isTypeErrorMessage(errMsg2);
+            expect(result1).to.be.true;
+        });
+    });
+
+    it('test empty data to a2b', () => {
+        const result = a2b(null);
+        expect(result).not.to.be;
+    });
+
+    describe('Test isInviteNewUserEvent', () => {
+        const puppetId = '@newskypebot:test.domain';
+
+        it('Expect to be truth if we get event for inviting new user', () => {
+            const result = isInviteNewUserEvent(puppetId, ghostEventData);
+            expect(result).to.be.true;
+        });
+        it('Expect to be false if we get event for inviting puppet', () => {
+            const result = isInviteNewUserEvent(puppetId, puppetEventData);
+            expect(result).not.to.be;
+        });
+        it('Expect to be false if we get event for inviting bot', () => {
+            const result = isInviteNewUserEvent(puppetId, skypebotEventData);
+            expect(result).not.to.be;
+        });
+    });
+
+    describe('Test setRoomAlias', () => {
+        const alias1 = getRoomAlias('aliasForRoom');
+        const alias2 = getRoomAlias('aliasForRoom2');
+        const body = {'room_id': roomId};
+
+        before(() => {
+            const isExpectedBody = data => data.room_id === body.room_id;
+            nock(URL_BASE)
+                .put(`/directory/room/${encodeURIComponent(alias1)}`, isExpectedBody)
+                .query({'access_token': puppet.token})
+                .reply(200)
+                .put(`/directory/room/${encodeURIComponent(alias2)}`, isExpectedBody)
+                .times(2)
+                .query({'access_token': puppet.token})
+                .reply(200)
+                .put(/directory\/room\/(.*)/, isExpectedBody)
+                .times(5)
+                .query({'access_token': puppet.token})
+                .replyWithError({'message': 'something awful happened', 'code': 404});
+        });
+
+        it('Expect to get 200 if we put alias for expected room', async () => {
+            const result = await setRoomAlias(roomId, alias1);
+            expect(result).to.be.equal(200);
+        });
+        it('Expect to get 200 if we put alias for expected room', async () => {
+            const result = await setRoomAlias(roomId, alias2);
+            expect(result).to.be.equal(200);
+        });
+        it('Expect to get error if we put unexpected room', async () => {
+            try {
+                const result = await setRoomAlias('fakeRoom', alias2);
+                expect(result).not.to.be;
+            } catch (error) {
+                expect(error).to.be;
+            }
         });
     });
 });

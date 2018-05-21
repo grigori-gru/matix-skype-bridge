@@ -1,7 +1,7 @@
 // const fs = require('fs');
 // const tmp = require('tmp');
 const log = require('../../modules/log')(module);
-const {getRoomName, getSkypeMatrixUsers, getRoomId, getBody, getDisplayName, a2b, b2a, getBufferAndType, getAvatarUrl, getNameFromId, isSkypeId, getTextContent} = require('../../utils');
+const {getRoomName, getSkypeMatrixUsers, getRoomId, getBody, a2b, b2a, getBufferAndType, getAvatarUrl, getNameFromId, isSkypeId, getTextContent} = require('../../utils');
 const {deskypeify, skypeify} = require('./skypeify');
 
 
@@ -65,8 +65,7 @@ module.exports = api => {
 
         sendTextToSkype: async (id, text, sender) => {
             try {
-                const displayName = await getDisplayName(sender);
-                const textContent = skypeify(getTextContent(displayName, text));
+                const textContent = skypeify(getTextContent(sender, text));
                 await api.sendMessage({textContent}, id);
             } catch (error) {
                 throw new Error(error);

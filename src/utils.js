@@ -25,14 +25,12 @@ const autoTagger = (sender, func) => text =>
 const tag = (text = '', sender) =>
     autoTagger(sender, tagMatrixMessage)(deskypeify(text));
 
-const getStream = (url, data) => needle.get(url, data);
-
 const downloadGetBufferAndHeaders = (url, data) =>
     new Promise((resolve, reject) => {
         let headers = {
             'content-type': 'application/octet-stream',
         };
-        const stream = getStream(url, data);
+        const stream = needle.get(url, data);
         stream.on('header', (_s, _h) => {
             headers = _h;
         });
@@ -41,9 +39,18 @@ const downloadGetBufferAndHeaders = (url, data) =>
         })).on('error', reject);
     });
 
+const getUrl = (arg, type) => {
+    const encodeArg = encodeURIComponent(arg);
+    const result = {
+        setRoomUrl: `${URL_BASE}/directory/room/${encodeArg}?${querystring.stringify({'access_token': puppet.token})}`,
+        getDisplayUrl: `${URL_BASE}/profile/${encodeArg}/displayname`,
+    };
+    return result[type];
+};
+
 const utils = {
-    isInviteNewUserEvent: (puppet, {membership, state_key: invitedUser}) =>
-        (membership === 'invite' && invitedUser.includes(`${servicePrefix}`) && invitedUser !== puppet.getUserId()),
+    isInviteNewUserEvent: (puppetId, {membership, state_key: invitedUser}) =>
+        (membership === 'invite' && invitedUser.includes(`${servicePrefix}`) && invitedUser !== puppetId),
 
     isTypeErrorMessage: err =>
         ['ressource.messageType', 'EventMessage.resourceType'].reduce((acc, val) =>
@@ -73,10 +80,9 @@ const utils = {
     getMatrixRoomAlias: skypeConverstaion => utils.a2b(skypeConverstaion),
 
     setRoomAlias: (roomId, alias) => {
-        const encodeAlias = encodeURIComponent(alias);
-        const query = querystring.stringify({'access_token': puppet.token});
-        const url = `${URL_BASE}/directory/room/${encodeAlias}?${query}`;
+        const url = getUrl(alias, 'setRoomUrl');
         const body = {'room_id': roomId};
+        log.debug('roomId', roomId);
         return fetch(url, {
             method: 'PUT',
             body: JSON.stringify(body),
@@ -84,12 +90,12 @@ const utils = {
         })
             .then(res => {
                 log.debug('Request for setting alias name %s for room %s in matrix have status %s ', alias, roomId, res.status);
+                return res.status;
             });
     },
 
     getDisplayName: matrixId => {
-        const encodeSender = encodeURIComponent(matrixId);
-        const url = `${URL_BASE}/profile/${encodeSender}/displayname`;
+        const url = getUrl(matrixId, 'getDisplayUrl');
         return fetch(url)
             .then(body =>
                 (body.status === 200 ? body.json() : null))
@@ -174,11 +180,11 @@ const utils = {
             body: tag(content, senderId),
             msgtype: 'm.text',
         };
-        if (html) {
-            // eslint-disable-next-line
-            body.formatted_body = html;
-            body.format = 'org.matrix.custom.html';
-        }
+        // if (html) {
+        //     // eslint-disable-next-line
+        //     body.formatted_body = html;
+        //     body.format = 'org.matrix.custom.html';
+        // }
         return body;
     },
 

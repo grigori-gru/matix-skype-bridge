@@ -38,6 +38,4 @@ const clientData = {
 
 const URL_BASE = `${config.bridge.homeserverUrl}/_matrix/client/r0`;
 
-const tmpPath = path.resolve(__dirname, '..', 'tmp');
-
-module.exports = ({...config, clientData, tmpPath, URL_BASE});
+module.exports = ({...config, clientData, URL_BASE});
