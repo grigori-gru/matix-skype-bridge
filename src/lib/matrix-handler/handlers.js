@@ -1,8 +1,6 @@
 const log = require('../../modules/log')(module);
-const {getDisplayName, setRoomAlias, getSkypeMatrixUsers, isInviteNewUserEvent, getSkypeRoomFromAliases} = require('../../utils');
-const config = require('../../config');
+const {tagMatrixMessage, getRoomAlias, getDisplayName, setRoomAlias, getSkypeMatrixUsers, isInviteNewUserEvent, getSkypeRoomFromAliases} = require('../../utils');
 const skypeApi = require('../skype-lib/client');
-const {tagMatrixMessage, getRoomAlias} = config.clientData;
 
 module.exports = ({puppet, bridge, skypeClient}) => {
     const {createConversation, sendTextToSkype, sendImageToSkype} = skypeApi(skypeClient);

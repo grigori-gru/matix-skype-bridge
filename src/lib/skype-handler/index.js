@@ -1,9 +1,6 @@
 const handlers = require('./handlers');
-const {isTypeErrorMessage} = require('../../utils');
+const {isMessageFromSkypeBot, isTypeErrorMessage} = require('../../utils');
 const log = require('../../modules/log')(module);
-
-const isMessageFromSkypeBot = (data, skypeClient) =>
-    data.from.username === skypeClient.context.username;
 
 module.exports = {
     skypeEventHandler: state => ({resource: data}) => {

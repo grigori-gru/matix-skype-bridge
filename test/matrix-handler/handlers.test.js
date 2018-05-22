@@ -4,10 +4,9 @@ const sinonChai = require('sinon-chai');
 const {expect} = chai;
 chai.use(sinonChai);
 const proxyquire = require('proxyquire');
-const {getTextContent, a2b} = require('../../src/utils');
+const {getRoomAlias, tagMatrixMessage, getTextContent, a2b} = require('../../src/utils');
 const {Bridge} = require('matrix-appservice-bridge');
 const log = require('../../src/modules/log')(module);
-const {getRoomAlias, tagMatrixMessage} = require('../../src/config').clientData;
 
 // const {data: ghostEventData} = require('../fixtures/matrix/member-ghost.json');
 // const {data: puppetEventData} = require('../fixtures/matrix/member-puppet.json');

@@ -1,14 +1,13 @@
 const path = require('path');
-const fs = require('fs');
+// const fs = require('fs');
 
 const log = require('../../modules/log')(module);
-const {getRoomAlias, tagMatrixMessage, getRoomAliasName, getGhostUser} = require('../../config').clientData;
-const {autoTagger, getBufferAndType, getMatrixRoomAlias, getInvitedUsers} = require('../../utils');
+const {getRoomAlias, getRoomAliasName, getGhostUser, getBufferAndType, getMatrixRoomAlias, getInvitedUsers} = require('../../utils');
 const skypeLib = require('../skype-lib/client');
 
 module.exports = state => {
     const {puppet, skypeClient, bridge} = state;
-    const {getSkypeRoomData, getPayload, downloadImage} = skypeLib(skypeClient);
+    const {getSkypeRoomData, getPayload} = skypeLib(skypeClient);
 
     const setGhostAvatar = async (ghostIntent, avatarUrl) => {
         const client = ghostIntent.getClient();
@@ -92,70 +91,70 @@ module.exports = state => {
 
         return newRoomId;
     };
+    // TODO: image handle will be next
+    // const handleSkypeImage = async data => {
+    //     log.debug('handling skype image message', data);
+    //     const {
+    //         roomId,
+    //         senderName,
+    //         senderId,
+    //         avatarUrl,
+    //         text,
+    //         // either one is fine
+    //         url, path, buffer,
+    //         h,
+    //         w,
+    //         type: mimetype,
+    //     } = data;
 
-    const handleSkypeImage = async data => {
-        log.debug('handling skype image message', data);
-        const {
-            roomId,
-            senderName,
-            senderId,
-            avatarUrl,
-            text,
-            // either one is fine
-            url, path, buffer,
-            h,
-            w,
-            type: mimetype,
-        } = data;
+    //     const matrixRoomId = await getOrCreateMatrixRoom(roomId);
+    //     const client = await getUserClient(matrixRoomId, senderId, senderName, avatarUrl);
+    //     if (!senderId) {
+    //         log.debug('this message was sent by me, but did it come from a matrix client or a skype client?');
+    //     }
 
-        const matrixRoomId = await getOrCreateMatrixRoom(roomId);
-        const client = await getUserClient(matrixRoomId, senderId, senderName, avatarUrl);
-        if (!senderId) {
-            log.debug('this message was sent by me, but did it come from a matrix client or a skype client?');
-        }
+    //     const upload = (buffer, opts) => client.uploadContent(buffer, Object.assign({
+    //         name: text,
+    //         type: mimetype,
+    //         rawResponse: false,
+    //     }, opts || {})).then(res =>
+    //         ({
+    //             'content_uri': res.content_uri || res,
+    //             'size': buffer.length,
+    //         }));
 
-        const upload = (buffer, opts) => client.uploadContent(buffer, Object.assign({
-            name: text,
-            type: mimetype,
-            rawResponse: false,
-        }, opts || {})).then(res =>
-            ({
-                'content_uri': res.content_uri || res,
-                'size': buffer.length,
-            }));
+    //     let promise;
+    //     if (url) {
+    //         promise = () =>
+    //             getBufferAndType(url).then(({buffer, type}) =>
+    //                 upload(buffer, {type: mimetype || type}));
+    //     } else if (path) {
+    //         promise = () =>
+    //             Promise.promisify(fs.readFile)(path).then(buffer =>
+    //                 upload(buffer));
+    //     } else if (buffer) {
+    //         promise = () => upload(buffer);
+    //     } else {
+    //         promise = Promise.reject(new Error('missing url or path'));
+    //     }
 
-        let promise;
-        if (url) {
-            promise = () =>
-                getBufferAndType(url).then(({buffer, type}) =>
-                    upload(buffer, {type: mimetype || type}));
-        } else if (path) {
-            promise = () =>
-                Promise.promisify(fs.readFile)(path).then(buffer =>
-                    upload(buffer));
-        } else if (buffer) {
-            promise = () => upload(buffer);
-        } else {
-            promise = Promise.reject(new Error('missing url or path'));
-        }
+    //     const tag = autoTagger(senderId, tagMatrixMessage);
 
-        const tag = autoTagger(senderId, tagMatrixMessage);
+    //     promise().then(({content_uri: content, size}) => {
+    //         log.debug('uploaded to', content);
+    //         const msg = tag(text);
+    //         const opts = {mimetype, h, w, size};
+    //         return client.sendImageMessage(matrixRoomId, content, opts, msg);
+    //     }, err => {
+    //         log.warn('upload error', err);
 
-        promise().then(({content_uri: content, size}) => {
-            log.debug('uploaded to', content);
-            const msg = tag(text);
-            const opts = {mimetype, h, w, size};
-            return client.sendImageMessage(matrixRoomId, content, opts, msg);
-        }, err => {
-            log.warn('upload error', err);
-
-            const opts = {
-                body: tag(url || path || text),
-                msgtype: 'm.text',
-            };
-            return client.sendMessage(matrixRoomId, opts);
-        });
-    };
+    //         const opts = {
+    //             body: tag(url || path || text),
+    //             msgtype: 'm.text',
+    //         };
+    //         return client.sendMessage(matrixRoomId, opts);
+    //     });
+    // };
 
     const sendMessage = async ({body, userData, roomId}) => {
         log.debug('sending message with body', body);
@@ -212,8 +211,8 @@ module.exports = state => {
             };
             const url = `${data.uri}/views/imgpsh_fullsize`;
             try {
-                const {buffer, type} = await downloadImage(url);
-                return handleSkypeImage({payload, buffer, type});
+                // const {buffer, type} = await downloadImage(url);
+                // return handleSkypeImage({payload, buffer, type});
             } catch (err) {
                 log.error(err);
                 const text = `[Image] (${name}) ${url}`;

@@ -8,6 +8,7 @@ const {deskypeify, skypeify} = require('./skypeify');
 module.exports = api => {
     const getContact = async id => {
         const contacts = await api.getContacts();
+
         return contacts.find(contact =>
             (contact.personId === id || contact.mri === id));
     };
@@ -39,6 +40,7 @@ module.exports = api => {
         const skypeRoomId = await api.createConversation(allUsers);
         await api.setConversationTopic(skypeRoomId, roomName);
         log.debug('Skype room %s is made', skypeRoomId);
+
         return a2b(skypeRoomId);
     };
 
@@ -59,14 +61,16 @@ module.exports = api => {
                 users: skypeMatrixUsers,
                 admins: [getSkypeBotId()],
             };
+
             return createSkypeConversation(roomName, allUsers);
         },
 
 
-        sendTextToSkype: async (id, text, sender) => {
+        sendTextToSkype: (id, text, sender) => {
             try {
                 const textContent = skypeify(getTextContent(sender, text));
-                await api.sendMessage({textContent}, id);
+
+                return api.sendMessage({textContent}, id);
             } catch (error) {
                 throw new Error(error);
             }
@@ -107,14 +111,17 @@ module.exports = api => {
             const userData = await getUserData(sender);
             const roomId = getRoomId(conversation);
             const body = getBody(content, userData.senderId, html);
+
             return {body, userData, roomId};
         },
+
         getSkypeRoomData: async id => {
             try {
                 const skypeConversation = await api.getConversation(b2a(id));
                 const topic = skypeConversation.type.toLowerCase() === 'conversation' ? 'Skype Direct Message' : 'Skype Group Chat';
                 const name = deskypeify(skypeConversation.threadProperties.topic) || topic;
                 log.debug('got skype room data', {name, topic});
+
                 return {name, topic};
             } catch (err) {
                 throw new Error(err);

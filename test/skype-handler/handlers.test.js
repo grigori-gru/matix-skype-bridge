@@ -9,8 +9,7 @@ const {resource: messageData} = require('../fixtures/skype-message.json');
 const clientLib = require('../../src/lib/skype-lib/client');
 const Puppet = require('../../src/puppet');
 const {Bridge, Intent} = require('matrix-appservice-bridge');
-const {getRoomAlias} = require('../../src/config').clientData;
-const {getMatrixUsers} = require('../../src/utils');
+const {getMatrixUsers, getRoomAlias} = require('../../src/utils');
 
 const puppetStub = createStubInstance(Puppet);
 const bridgeStub = createStubInstance(Bridge);

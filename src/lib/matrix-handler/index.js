@@ -1,6 +1,6 @@
 const log = require('../../modules/log')(module);
 const handlers = require('./handlers');
-const {isTaggedMatrixMessage} = require('../../config').clientData;
+const {isTaggedMatrixMessage} = require('../../utils');
 
 module.exports = state => (req, _context) => {
     const {handleMatrixMessageEvent, handleMatrixMemberEvent} = handlers(state);
