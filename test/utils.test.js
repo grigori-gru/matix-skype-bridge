@@ -1,6 +1,6 @@
 const nock = require('nock');
 const {expect} = require('chai');
-const {getGhostUser, getSkypeID, getRoomAlias, setRoomAlias, isInviteNewUserEvent, isTypeErrorMessage, getSkypeRoomFromAliases, getDisplayName, a2b, getSkypeMatrixUsers, getRoomName, getIdFromMatrix, getId, getMatrixUsers, getNameToSkype} = require('../src/utils');
+const {getMatrixUser, getSkypeID, getRoomAlias, setRoomAlias, isInviteNewUserEvent, isTypeErrorMessage, getSkypeRoomFromAliases, getDisplayName, toMatrixFormat, getSkypeMatrixUsers, getRoomName, getIdFromMatrix, getId, getMatrixUsers, getNameToSkype} = require('../src/utils');
 const {puppet, bridge, URL_BASE} = require('../src/config.js');
 const {data: ghostEventData} = require('./fixtures/matrix/member-ghost.json');
 const {data: puppetEventData} = require('./fixtures/matrix/member-puppet.json');
@@ -29,8 +29,8 @@ describe('Utils test', () => {
     });
 
     it('Test getId', () => {
-        const skypeUser1 = getGhostUser(a2b('8:live:abcd'));
-        const skypeUser2 = getGhostUser(a2b('8:live:abcd_dcba'));
+        const skypeUser1 = getMatrixUser(toMatrixFormat('8:live:abcd'));
+        const skypeUser2 = getMatrixUser(toMatrixFormat('8:live:abcd_dcba'));
         const users = [skypeUser1, '@gv_grudinin:matrix:bingo-boom.ru', skypeUser2];
 
         // eslint-disable-next-line
@@ -80,7 +80,7 @@ describe('Utils test', () => {
             {personId: '8:live:abcdefg'},
             {personId: '8:live:hijk'},
         ];
-        const users = clientCollection.map(({personId}) => getGhostUser(a2b(personId)));
+        const users = clientCollection.map(({personId}) => getMatrixUser(toMatrixFormat(personId)));
         const result = getSkypeMatrixUsers(clientCollection, users);
         const expected = [
             '8:live:skypebottest_2',
@@ -97,9 +97,9 @@ describe('Utils test', () => {
             {personId: '8:live:hijk'},
         ];
         const users = [
-            `@skype_${a2b('8:live:skypebottest_2')}:${bridge.domain}`,
-            `@skype_${a2b('8:live:abcdefg')}:${bridge.domain}`,
-            `@skype_${a2b('8:live:hijk')}:${bridge.domain}`,
+            `@skype_${toMatrixFormat('8:live:skypebottest_2')}:${bridge.domain}`,
+            `@skype_${toMatrixFormat('8:live:abcdefg')}:${bridge.domain}`,
+            `@skype_${toMatrixFormat('8:live:hijk')}:${bridge.domain}`,
         ];
         const result = getSkypeMatrixUsers(clientCollection, users);
         const expected = [
@@ -111,13 +111,13 @@ describe('Utils test', () => {
     });
     describe('Test getSkypeMatrixUsers', () => {
         const roomAliases = [
-            getRoomAlias(a2b('failAlias')),
-            getRoomAlias(a2b('failAlias2')),
+            getRoomAlias(toMatrixFormat('failAlias')),
+            getRoomAlias(toMatrixFormat('failAlias2')),
         ];
 
         it('Expect getSkypeMatrixUsers return alias name for correct alias', () => {
             const expected = 'correctAlias';
-            const expectedAlias = getRoomAlias(a2b(expected));
+            const expectedAlias = getRoomAlias(toMatrixFormat(expected));
             const result = getSkypeRoomFromAliases([...roomAliases, expectedAlias]);
             expect(result).to.deep.equal(expected);
         });
@@ -149,8 +149,8 @@ describe('Utils test', () => {
         });
     });
 
-    it('test empty data to a2b', () => {
-        const result = a2b(null);
+    it('test empty data to toMatrixFormat', () => {
+        const result = toMatrixFormat(null);
         expect(result).not.to.be;
     });
 

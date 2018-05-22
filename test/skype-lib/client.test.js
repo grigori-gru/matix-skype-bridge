@@ -6,7 +6,7 @@ const {expect} = chai;
 chai.use(sinonChai);
 const proxyquire = require('proxyquire');
 // const config = require('../../src/config.js');
-const {a2b, getNameFromId, getAvatarUrl, getTextContent, getBody, getRoomId} = require('../../src/utils');
+const {getMatrixUser, toMatrixFormat, getNameFromId, getAvatarUrl, getTextContent, getBody, getRoomId} = require('../../src/utils');
 // const fs = require('fs');
 const writeFileStub = stub();
 const {skypeify} = require('../../src/lib/skype-lib/skypeify');
@@ -18,6 +18,9 @@ const getConversationStub = stub();
 const sendMessageStub = stub();
 const getDisplayNameStub = stub();
 const getContactsStub = stub();
+const getRoomNameStub = stub();
+const createConversationStub = stub();
+const setConversationTopicStub = stub();
 
 const skypeLib = proxyquire('../../src/lib/skype-lib/client',
     {
@@ -26,6 +29,7 @@ const skypeLib = proxyquire('../../src/lib/skype-lib/client',
         },
         '../../utils': {
             getDisplayName: getDisplayNameStub,
+            getRoomName: getRoomNameStub,
         },
     });
 
@@ -34,7 +38,7 @@ const userAscend = {personId: '8:green.streak', mri: '8:green.streak', displayNa
 const userTranslator = {personId: '28:0d5d6cff-595d-49d7-9cf8-973173f5233b', mri: '28:0d5d6cff-595d-49d7-9cf8-973173f5233b', displayName: 'Skype Translator', profile: {avatarUrl: 'http://avatarTranslator'}};
 const userSkypebot = {personId: '8:live:test_1', mri: '8:live:test_1', displayName: 'Skypebot test', profile: {avatarUrl: 'http://avatarSkypebot'}};
 const userSkype = {personId: '28:concierge', mri: '28:concierge', displayName: 'Skype', profile: {avatarUrl: 'http://avatarSkype'}};
-const userName = {personId: '8:live:name', mri: '8:live:name', displayName: 'name test', profile: {avatarUrl: 'http://avatarName'}};
+const userBob = {personId: '8:live:bob', mri: '8:live:bob', displayName: 'user Bob', profile: {avatarUrl: 'http://userBobAvatar'}};
 
 const skypeApiMock = {
     contacts: [
@@ -43,7 +47,7 @@ const skypeApiMock = {
         userTranslator,
         userSkypebot,
         userSkype,
-        userName,
+        userBob,
     ],
     sendImage: sendImageStub,
     conversations: [
@@ -58,14 +62,20 @@ const skypeApiMock = {
             threadProperties: {},
         },
     ],
+    createConversation: createConversationStub,
     getContacts: getContactsStub,
     getConversation: getConversationStub,
     sendMessage: sendMessageStub,
+    context: {
+        username: 'skypebot:live',
+    },
+    setConversationTopic: setConversationTopicStub,
 };
 
 getContactsStub.resolves(skypeApiMock.contacts);
 
 const {
+    createConversation,
     sendTextToSkype,
     // sendImageToSkype,
     getPayload,
@@ -87,13 +97,47 @@ describe('Client testing', () => {
         expect(contact).to.be.undefined;
     });
 
+    describe('CreateConversation test', () => {
+        const usersCollection = {
+            [getMatrixUser('skypebot', '')]: {
+                'avatar_url': 'url',
+                'displayname': 'skypebot',
+            },
+            [getMatrixUser('user', '')]: {
+                'avatar_url': 'url',
+                'displayname': 'user',
+            },
+            [getMatrixUser(toMatrixFormat(userBob.personId))]: {
+                'avatar_url': userBob.profile.avatarUrl,
+                'displayname': userBob.displayName,
+            },
+            [getMatrixUser('newSkypebot', '')]: {
+                'avatar_url': 'url',
+                'displayname': 'newSkypebot',
+            },
+        };
+        const matrixRoomName = 'matrixRoomName';
+        const skypeConversation = 'skypeConversation';
+
+        it('Expect skype converstion to be created and new room name returned', async () => {
+            createConversationStub.resolves(skypeConversation);
+            const result = await createConversation(usersCollection, matrixRoomName);
+
+            expect(createConversationStub).to.be.calledWithExactly({
+                users: [userBob.personId],
+                admins: [`8:${skypeApiMock.context.username}`]});
+            expect(setConversationTopicStub).to.be.calledWithExactly(skypeConversation, matrixRoomName);
+            expect(result).to.be.equal(toMatrixFormat(skypeConversation));
+        });
+    });
+
     describe('getUserData test', () => {
         it('expect getUserData returns both senderName and avatarUrl from contact of skypeBot', async () => {
             const data = await getUserData(userAscend.personId);
             const expected = {
                 senderName: userAscend.displayName,
                 avatarUrl: userAscend.profile.avatarUrl,
-                senderId: a2b(userAscend.personId),
+                senderId: toMatrixFormat(userAscend.personId),
             };
             expect(data).to.be.deep.equal(expected);
         });
@@ -103,7 +147,7 @@ describe('Client testing', () => {
             const expected = {
                 senderName: getNameFromId(id),
                 avatarUrl: getAvatarUrl(id),
-                senderId: a2b(id),
+                senderId: toMatrixFormat(id),
             };
             expect(data).to.be.deep.equal(expected);
         });
@@ -112,7 +156,7 @@ describe('Client testing', () => {
             const data = await getUserData(id);
             const expected = {
                 senderName: id,
-                senderId: a2b(id),
+                senderId: toMatrixFormat(id),
             };
             expect(data).to.be.deep.equal(expected);
         });
@@ -154,7 +198,7 @@ describe('Client testing', () => {
         it('expect getSkypeRoomData returns the same name and topic if no topic has no conversation', async () => {
             const [conversation] = skypeApiMock.conversations;
             const roomId = conversation.id;
-            const testRoomId = a2b(roomId);
+            const testRoomId = toMatrixFormat(roomId);
             getConversationStub.callsFake().resolves(conversation);
 
             const result = await getSkypeRoomData(testRoomId);
@@ -170,7 +214,7 @@ describe('Client testing', () => {
             const topic = skypeify('test topic');
             const conversation = {...skypeApiMock.conversations[0], threadProperties: {topic}};
             const roomId = conversation.id;
-            const testRoomId = a2b(roomId);
+            const testRoomId = toMatrixFormat(roomId);
             getConversationStub.callsFake().resolves(conversation);
 
             const result = await getSkypeRoomData(testRoomId);
@@ -186,7 +230,7 @@ describe('Client testing', () => {
             const topic = skypeify('test topic');
             const conversation = {...skypeApiMock.conversations[0], threadProperties: {topic}};
             const roomId = conversation.id;
-            const testRoomId = a2b(roomId);
+            const testRoomId = toMatrixFormat(roomId);
             getConversationStub.callsFake().throws();
             try {
                 await getSkypeRoomData(testRoomId);
@@ -198,7 +242,7 @@ describe('Client testing', () => {
     });
 
     // it('expect sendImageToSkype to send image and not to have data in config.tmp dir', async () => {
-    //     const id = a2b('8:live:abcd');
+    //     const id = toMatrixFormat('8:live:abcd');
     //     const data = {
     //         text: 'text',
     //         url: 'http://testUrl',
@@ -209,7 +253,7 @@ describe('Client testing', () => {
     //     const expectedMessage = {
     //         name: data.text,
     //     };
-    //     const expectedConversationId = b2a(id);
+    //     const expectedConversationId = toSkypeFormat(id);
     //     expect(writeFileStub).not.to.be.called;
     //     expect(sendImageStub).to.be.calledWithExactly(expectedMessage, expectedConversationId);
     // });
@@ -237,11 +281,13 @@ describe('Client testing', () => {
             const data = {
                 sender: 'sender',
             };
+            sendMessageStub.throws();
             try {
-                await sendTextToSkype(id, text, data);
+                const result = await sendTextToSkype(id, text, data);
+                expect(result).not.to.be;
             } catch (err) {
                 expect(err).to.be;
-                expect(sendMessageStub).not.to.be.called;
+                expect(sendMessageStub).to.be.thrown;
             }
         });
     });

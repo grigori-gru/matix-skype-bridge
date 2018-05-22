@@ -54,14 +54,19 @@ const utils = {
 
     getRoomAliasName: id => `${servicePrefix}${id}`,
 
-    getGhostUser: id => `@${servicePrefix}${id}:${domain}`,
+    getMatrixUser: (id, prefix = servicePrefix) => `@${servicePrefix}${id}:${domain}`,
 
     getRoomAlias: id => `#${utils.getRoomAliasName(id)}:${domain}`,
 
     getSkypeID: name => `8:live:${name}`,
 
-    isInviteNewUserEvent: (puppetId, {membership, state_key: invitedUser}) =>
-        (membership === 'invite' && invitedUser.includes(`${servicePrefix}`) && invitedUser !== puppetId),
+    isInviteNewUserEvent: (puppetId, {membership, state_key: invitedUser}) => {
+        log.debug(puppetId);
+        log.debug(invitedUser);
+        const result = (membership === 'invite' && invitedUser.includes(`${servicePrefix}`) && invitedUser !== puppetId);
+        log.debug(result);
+        return result;
+    },
 
     isTypeErrorMessage: err =>
         ['ressource.messageType', 'EventMessage.resourceType'].reduce((acc, val) =>
@@ -75,20 +80,20 @@ const utils = {
 
     getAvatarUrl: id => `https://avatars.skype.com/v1/avatars/${entities.encode(utils.getNameFromId(id))}/public?returnDefaultImage=false&cacheHeaders=true`,
 
-    a2b: str => {
+    toMatrixFormat: str => {
         if (str) {
             return new Buffer(str).toString('base64');
         }
         log.warn('unexpected data for decode');
     },
-    b2a: str => {
+    toSkypeFormat: str => {
         if (str) {
             return new Buffer(str, 'base64').toString('ascii');
         }
         log.warn('unexpected data for decode');
     },
 
-    getMatrixRoomAlias: skypeConverstaion => utils.a2b(skypeConverstaion),
+    getMatrixRoomAlias: skypeConverstaion => utils.toMatrixFormat(skypeConverstaion),
 
     setRoomAlias: (roomId, alias) => {
         const url = getUrl(alias, 'setRoomUrl');
@@ -168,7 +173,7 @@ const utils = {
 
     getId: user =>
         (user.includes(servicePrefix) ?
-            utils.b2a(utils.getIdFromMatrix(user, servicePrefix)) :
+            utils.toSkypeFormat(utils.getIdFromMatrix(user, servicePrefix)) :
             utils.getSkypeID(utils.getIdFromMatrix(user))),
 
     getSkypeMatrixUsers: (skypeCollection = [], matrixRoomUsers) => {
@@ -184,7 +189,7 @@ const utils = {
     // isMatrixImage: ({original_file_name: name, path}) =>
     //     (isTaggedMatrixMessage(name) || isFilenameTagged(path)),
 
-    getRoomId: conversation => utils.a2b(conversation).replace(':', '^'),
+    getRoomId: conversation => utils.toMatrixFormat(conversation).replace(':', '^'),
 
     getBody: (content, senderId, html) => {
         const body = {
@@ -210,7 +215,7 @@ const utils = {
             const matches = localpart.match(patt);
             return matches ? matches[1] : result;
         }, null);
-        return utils.b2a(result);
+        return utils.toSkypeFormat(result);
     },
 };
 

@@ -1,7 +1,7 @@
 // const fs = require('fs');
 // const tmp = require('tmp');
 const log = require('../../modules/log')(module);
-const {getRoomName, getSkypeMatrixUsers, getRoomId, getBody, a2b, b2a, getBufferAndType, getAvatarUrl, getNameFromId, isSkypeId, getTextContent} = require('../../utils');
+const {getSkypeMatrixUsers, getRoomId, getBody, toMatrixFormat, toSkypeFormat, getAvatarUrl, getNameFromId, isSkypeId, getTextContent} = require('../../utils');
 const {deskypeify, skypeify} = require('./skypeify');
 
 
@@ -30,7 +30,7 @@ module.exports = api => {
             output.senderName = sender;
         }
 
-        return {...output, senderId: a2b(sender)};
+        return {...output, senderId: toMatrixFormat(sender)};
     };
 
     const getSkypeBotId = () => `8:${api.context.username}`;
@@ -41,19 +41,19 @@ module.exports = api => {
         await api.setConversationTopic(skypeRoomId, roomName);
         log.debug('Skype room %s is made', skypeRoomId);
 
-        return a2b(skypeRoomId);
+        return toMatrixFormat(skypeRoomId);
     };
 
     return {
-        downloadImage: url => getBufferAndType(url, {
-            cookies: api.context.cookies,
-            headers: {
-                Authorization: `skype_token ${api.context.skypeToken.value}`,
-            },
-        }),
+        // TODO: next time
+        // downloadImage: url => getBufferAndType(url, {
+        //     cookies: api.context.cookies,
+        //     headers: {
+        //         Authorization: `skype_token ${api.context.skypeToken.value}`,
+        //     },
+        // }),
 
-        createConversation: async (usersCollection, matrixRoomId) => {
-            const roomName = await getRoomName(matrixRoomId);
+        createConversation: async (usersCollection, roomName) => {
             const users = Object.keys(usersCollection);
             const contacts = await api.getContacts();
             const skypeMatrixUsers = getSkypeMatrixUsers(contacts, users);
@@ -96,7 +96,7 @@ module.exports = api => {
         //                         resolve(api.sendImage({
         //                             file: path,
         //                             name: data.text,
-        //                         }, b2a(id)));
+        //                         }, toSkypeFormat(id)));
         //                     });
         //                 });
         //             });
@@ -117,7 +117,7 @@ module.exports = api => {
 
         getSkypeRoomData: async id => {
             try {
-                const skypeConversation = await api.getConversation(b2a(id));
+                const skypeConversation = await api.getConversation(toSkypeFormat(id));
                 const topic = skypeConversation.type.toLowerCase() === 'conversation' ? 'Skype Direct Message' : 'Skype Group Chat';
                 const name = deskypeify(skypeConversation.threadProperties.topic) || topic;
                 log.debug('got skype room data', {name, topic});
@@ -127,8 +127,6 @@ module.exports = api => {
                 throw new Error(err);
             }
         },
-
-        getName: () => api.context.username,
 
         testOnly: {
             getContact,

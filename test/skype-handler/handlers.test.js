@@ -10,6 +10,7 @@ const clientLib = require('../../src/lib/skype-lib/client');
 const Puppet = require('../../src/puppet');
 const {Bridge, Intent} = require('matrix-appservice-bridge');
 const {getMatrixUsers, getRoomAlias} = require('../../src/utils');
+const log = require('../../src/modules/log')(module);
 
 const puppetStub = createStubInstance(Puppet);
 const bridgeStub = createStubInstance(Bridge);
@@ -90,14 +91,30 @@ getContactsStub.resolves(state.skypeClient.contacts);
 
 const {getPayload} = clientLib(state.skypeClient);
 
+const logErrorStub = stub();
 const handlers = proxyquire('../../src/lib/skype-handler/handlers', {
     '../../utils': {
         getBufferAndType: getBufferAndTypeStub,
     },
+    '../../modules/log': () => ({
+        error: logErrorStub,
+        debug: log.debug,
+        info: log.info,
+        warn: log.warn,
+    }),
 });
-const {messageHandler} = handlers(state);
+const {messageHandler, testOnly: {getIntentFomSkypeSender}} = handlers(state);
 
 describe('Skype Handler testing', () => {
+    beforeEach(() => {
+        bridgeStub.getIntent.returns(bridgeIntentStub);
+
+        bridgeIntentStub.setDisplayName.reset();
+        bridgeIntentStub.join.reset();
+        sendMessageStub.reset();
+        puppetStub.getRoom.reset();
+    });
+
     it('expect messageHandler returns with message event', async () => {
         const {body, roomId} = await getPayload(messageData);
         const roomAlias = getRoomAlias(roomId);
@@ -115,8 +132,47 @@ describe('Skype Handler testing', () => {
 
         const {members} = skypeClientMock.getConversation(messageData.conversation);
         expect(puppetStub.invite).to.be.calledWithExactly(matrixRoomId, getMatrixUsers(members));
+    });
 
-        // inviteSkypeConversationMembersStub.resetHistory();
+    it('expect messageHandler to have throw error inside and not to return anything or to be thrown', async () => {
+        puppetStub.getRoom.throws();
+        const result = await messageHandler(messageData);
+        expect(result).not.to.be;
+
+        expect(bridgeIntentStub.setDisplayName).not.to.be.called;
+        expect(bridgeIntentStub.join).not.to.be.called;
+        expect(sendMessageStub).not.to.be.called;
+        expect(logErrorStub).to.be.calledWith('messageHandler error');
+    });
+
+    it('expect creating room if no room is', async () => {
+        const {body, roomId} = await getPayload(messageData);
+
+        puppetStub.getRoom.resolves(null);
+        bridgeIntentStub.getClient.returns({credentials: {userId: 'userId'}, sendMessage: sendMessageStub});
+        bridgeIntentStub.getProfileInfo.withArgs('userId').returns({'avatar_url': 'currentAvatarUrl', 'displayName': 'displayName'});
+        bridgeIntentStub.createRoom.returns({'room_id': matrixRoomId});
+        await messageHandler(messageData);
+
+        expect(bridgeIntentStub.setDisplayName).not.to.be.called;
+        expect(getBufferAndTypeStub).not.to.be.called;
+        expect(bridgeIntentStub.join).to.be.calledWithExactly(matrixRoomId);
+        expect(sendMessageStub).to.be.calledWithExactly(matrixRoomId, body);
+        expect(puppetStub.saveRoom).to.be.calledWithExactly(matrixRoomId, roomId);
+        const {members} = skypeClientMock.getConversation(messageData.conversation);
+        expect(puppetStub.invite).to.be.calledWithExactly(matrixRoomId, getMatrixUsers(members));
+    });
+
+    it('expect getIntentFromSkype to create new name and avatar', async () => {
+        const contentUrl = 'result';
+        const client = {credentials: {userId: 'fake'}, uploadContent: () => ({'content_uri': contentUrl})};
+        bridgeIntentStub.getClient.returns(client);
+        bridgeIntentStub.getProfileInfo.withArgs('fake').returns({});
+        bridgeIntentStub.setDisplayName.resolves();
+        getBufferAndTypeStub.resolves({buffer: 'buffer', type: 'type'});
+        await getIntentFomSkypeSender('userId', 'name', 'htttp://avatarUrl');
+
+        expect(bridgeIntentStub.setAvatarUrl).to.be.calledWithExactly(contentUrl);
     });
     // it('expect imageHandler returns with message event', () => {
     //     await messageHandler(messageData);

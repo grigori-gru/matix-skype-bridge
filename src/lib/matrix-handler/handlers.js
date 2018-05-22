@@ -1,9 +1,9 @@
 const log = require('../../modules/log')(module);
-const {tagMatrixMessage, getRoomAlias, getDisplayName, setRoomAlias, getSkypeMatrixUsers, isInviteNewUserEvent, getSkypeRoomFromAliases} = require('../../utils');
+const {getRoomName, tagMatrixMessage, getRoomAlias, getDisplayName, setRoomAlias, getSkypeMatrixUsers, isInviteNewUserEvent, getSkypeRoomFromAliases} = require('../../utils');
 const skypeApi = require('../skype-lib/client');
 
 module.exports = ({puppet, bridge, skypeClient}) => {
-    const {createConversation, sendTextToSkype, sendImageToSkype} = skypeApi(skypeClient);
+    const {createConversation, sendTextToSkype} = skypeApi(skypeClient);
 
     const getSkypeConversation = matrixRoomId => {
         const room = puppet.getMatrixRoomById(matrixRoomId);
@@ -25,7 +25,6 @@ module.exports = ({puppet, bridge, skypeClient}) => {
         handleMatrixMemberEvent: async data => {
             try {
                 const {room_id: matrixRoomId, state_key: invitedUser} = data;
-
                 if (!isInviteNewUserEvent(puppet.getUserId(), data)) {
                     log.debug('ignored a matrix event');
                     return;
@@ -48,7 +47,8 @@ module.exports = ({puppet, bridge, skypeClient}) => {
                 await botClient.joinRoom(matrixRoomId);
 
                 const usersCollection = await bot.getJoinedMembers(matrixRoomId);
-                const newSkypeConversation = await createConversation(usersCollection, matrixRoomId);
+                const roomName = await getRoomName(matrixRoomId);
+                const newSkypeConversation = await createConversation(usersCollection, roomName);
                 const alias = getRoomAlias(newSkypeConversation);
 
                 return setRoomAlias(matrixRoomId, alias);
@@ -69,16 +69,16 @@ module.exports = ({puppet, bridge, skypeClient}) => {
 
                         return sendTextToSkype(skypeConversation, msg, displayName);
                     }
-                    case 'm.image': {
-                        log.debug('image message from riot');
+                    // case 'm.image': {
+                    //     log.debug('image message from riot');
 
-                        const url = puppet.getClient().mxcUrlToHttp(data.content.url);
+                    //     const url = puppet.getClient().mxcUrlToHttp(data.content.url);
 
-                        return sendImageToSkype(skypeConversation, {
-                            url,
-                            text: tagMatrixMessage(body),
-                        }, data);
-                    }
+                    //     return sendImageToSkype(skypeConversation, {
+                    //         url,
+                    //         text: tagMatrixMessage(body),
+                    //     }, data);
+                    // }
                     default:
                         log.warn('dont know how to handle this msgtype', msgtype);
                 }
