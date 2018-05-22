@@ -17,7 +17,6 @@ const skypeClient = {
     context: {
         username: 'live:ignore_1',
     },
-    getName: () => skypeClient.context.username,
 };
 const state = {skypeClient};
 

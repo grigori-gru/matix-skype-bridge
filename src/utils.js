@@ -7,9 +7,8 @@ const querystring = require('querystring');
 const {AllHtmlEntities: Entities} = require('html-entities');
 const entities = new Entities();
 const log = require('./modules/log')(module);
-const {bridge, puppet, SKYPE_USERS_TO_IGNORE, URL_BASE, clientData} = require('./config.js');
+const {servicePrefix, bridge, puppet, SKYPE_USERS_TO_IGNORE, URL_BASE, deduplicationTag, deduplicationTagRegex} = require('./config.js');
 const {domain} = bridge;
-const {servicePrefix, getSkypeID, tagMatrixMessage} = clientData;
 const {deskypeify} = require('./lib/skype-lib/skypeify');
 
 const patt = new RegExp(`^#${servicePrefix}(.+)$`);
@@ -21,9 +20,6 @@ const patt = new RegExp(`^#${servicePrefix}(.+)$`);
 // tag the message to know it was sent by the bridge
 const autoTagger = (sender, func) => text =>
     (sender ? text : func(text));
-
-const tag = (text = '', sender) =>
-    autoTagger(sender, tagMatrixMessage)(deskypeify(text));
 
 const downloadGetBufferAndHeaders = (url, data) =>
     new Promise((resolve, reject) => {
@@ -49,8 +45,28 @@ const getUrl = (arg, type) => {
 };
 
 const utils = {
-    isInviteNewUserEvent: (puppetId, {membership, state_key: invitedUser}) =>
-        (membership === 'invite' && invitedUser.includes(`${servicePrefix}`) && invitedUser !== puppetId),
+    tagMatrixMessage: text => `${text}${deduplicationTag}`,
+
+    tag: (text = '', sender) =>
+        autoTagger(sender, utils.tagMatrixMessage)(deskypeify(text)),
+
+    isTaggedMatrixMessage: text => deduplicationTagRegex.test(text),
+
+    getRoomAliasName: id => `${servicePrefix}${id}`,
+
+    getMatrixUser: (id, prefix = servicePrefix) => `@${servicePrefix}${id}:${domain}`,
+
+    getRoomAlias: id => `#${utils.getRoomAliasName(id)}:${domain}`,
+
+    getSkypeID: name => `8:live:${name}`,
+
+    isInviteNewUserEvent: (puppetId, {membership, state_key: invitedUser}) => {
+        log.debug(puppetId);
+        log.debug(invitedUser);
+        const result = (membership === 'invite' && invitedUser.includes(`${servicePrefix}`) && invitedUser !== puppetId);
+        log.debug(result);
+        return result;
+    },
 
     isTypeErrorMessage: err =>
         ['ressource.messageType', 'EventMessage.resourceType'].reduce((acc, val) =>
@@ -64,20 +80,20 @@ const utils = {
 
     getAvatarUrl: id => `https://avatars.skype.com/v1/avatars/${entities.encode(utils.getNameFromId(id))}/public?returnDefaultImage=false&cacheHeaders=true`,
 
-    a2b: str => {
+    toMatrixFormat: str => {
         if (str) {
             return new Buffer(str).toString('base64');
         }
         log.warn('unexpected data for decode');
     },
-    b2a: str => {
+    toSkypeFormat: str => {
         if (str) {
             return new Buffer(str, 'base64').toString('ascii');
         }
         log.warn('unexpected data for decode');
     },
 
-    getMatrixRoomAlias: skypeConverstaion => utils.a2b(skypeConverstaion),
+    getMatrixRoomAlias: skypeConverstaion => utils.toMatrixFormat(skypeConverstaion),
 
     setRoomAlias: (roomId, alias) => {
         const url = getUrl(alias, 'setRoomUrl');
@@ -157,8 +173,8 @@ const utils = {
 
     getId: user =>
         (user.includes(servicePrefix) ?
-            utils.b2a(utils.getIdFromMatrix(user, servicePrefix)) :
-            getSkypeID(utils.getIdFromMatrix(user))),
+            utils.toSkypeFormat(utils.getIdFromMatrix(user, servicePrefix)) :
+            utils.getSkypeID(utils.getIdFromMatrix(user))),
 
     getSkypeMatrixUsers: (skypeCollection = [], matrixRoomUsers) => {
         const usersIds = matrixRoomUsers.map(user => utils.getId(user));
@@ -173,11 +189,11 @@ const utils = {
     // isMatrixImage: ({original_file_name: name, path}) =>
     //     (isTaggedMatrixMessage(name) || isFilenameTagged(path)),
 
-    getRoomId: conversation => utils.a2b(conversation).replace(':', '^'),
+    getRoomId: conversation => utils.toMatrixFormat(conversation).replace(':', '^'),
 
     getBody: (content, senderId, html) => {
         const body = {
-            body: tag(content, senderId),
+            body: utils.tag(content, senderId),
             msgtype: 'm.text',
         };
         // if (html) {
@@ -187,6 +203,8 @@ const utils = {
         // }
         return body;
     },
+    isMessageFromSkypeBot: (data, skypeClient) =>
+        data.from.username === skypeClient.context.username,
 
     getSkypeRoomFromAliases: aliases => {
         if (!aliases) {
@@ -197,7 +215,7 @@ const utils = {
             const matches = localpart.match(patt);
             return matches ? matches[1] : result;
         }, null);
-        return utils.b2a(result);
+        return utils.toSkypeFormat(result);
     },
 };
 
