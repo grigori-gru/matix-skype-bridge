@@ -1,7 +1,7 @@
 // const fs = require('fs');
 // const tmp = require('tmp');
 const log = require('../../modules/log')(module);
-const {getSkypeMatrixUsers, getRoomId, getBody, toMatrixFormat, toSkypeFormat, getAvatarUrl, getNameFromId, isSkypeId, getTextContent} = require('../../utils');
+const {getSkypeMatrixUsers, getMatrixRoomId, getBody, toMatrixFormat, toSkypeFormat, getAvatarUrl, getNameFromId, isSkypeId, getTextContent} = require('../../utils');
 const {deskypeify, skypeify} = require('./skypeify');
 
 
@@ -109,7 +109,7 @@ module.exports = api => {
 
         getPayload: async ({content, conversation, from: {raw: sender}, html}) => {
             const userData = await getUserData(sender);
-            const roomId = getRoomId(conversation);
+            const roomId = getMatrixRoomId(conversation);
             const body = getBody(content, userData.senderId, html);
 
             return {body, userData, roomId};

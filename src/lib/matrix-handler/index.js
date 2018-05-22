@@ -8,14 +8,10 @@ module.exports = state => (req, _context) => {
 
     switch (data.type) {
         case 'm.room.message':
-            log.debug('incoming message. data:', data);
-            if (isTaggedMatrixMessage(data.content.body)) {
-                log.debug('ignoring tagged message, it was sent by the bridge');
-                return;
-            }
-            return handleMatrixMessageEvent(data);
+            log.debug('incoming message event. data:', data);
+            return isTaggedMatrixMessage(data.content.body) || handleMatrixMessageEvent(data);
         case 'm.room.member':
-            log.debug('incoming message. data:', data);
+            log.debug('incoming member event. data:', data);
             return handleMatrixMemberEvent(data);
         default:
             break;

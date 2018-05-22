@@ -17,4 +17,8 @@ module.exports = ({
     servicePrefix: 'skype_',
     deduplicationTag: config.deduplicationTag || ' \ufeff',
     deduplicationTagRegex: new RegExp(config.deduplicationTagPattern || ' \\ufeff$'),
+    skypePrefix: '8:live',
+    matrixUserPrefix: '@',
+    matrixRoomAliasPrefix: '#',
+    delim: ':',
 });

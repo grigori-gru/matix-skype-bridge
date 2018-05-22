@@ -2,7 +2,7 @@ const path = require('path');
 // const fs = require('fs');
 
 const log = require('../../modules/log')(module);
-const {getRoomAlias, getRoomAliasName, getMatrixUser, getBufferAndType, getMatrixRoomAlias, getInvitedUsers} = require('../../utils');
+const {getRoomAlias, getServiceName: getRoomAliasName, getMatrixUser, getBufferAndType, getMatrixRoomAlias, getInvitedUsers} = require('../../utils');
 const skypeLib = require('../skype-lib/client');
 
 module.exports = state => {

@@ -1,11 +1,29 @@
 const nock = require('nock');
 const {expect} = require('chai');
-const {getMatrixUser, getSkypeID, getRoomAlias, setRoomAlias, isInviteNewUserEvent, isTypeErrorMessage, getSkypeRoomFromAliases, getDisplayName, toMatrixFormat, getSkypeMatrixUsers, getRoomName, getIdFromMatrix, getId, getMatrixUsers, getNameToSkype} = require('../src/utils');
-const {puppet, bridge, URL_BASE} = require('../src/config.js');
+const {matrixUserPrefix, delim, skypePrefix, puppet, bridge, URL_BASE} = require('../src/config.js');
 const {data: ghostEventData} = require('./fixtures/matrix/member-ghost.json');
 const {data: puppetEventData} = require('./fixtures/matrix/member-puppet.json');
 const {data: skypebotEventData} = require('./fixtures/matrix/member-skypebot.json');
-
+const {
+    isTaggedMatrixMessage,
+    sum,
+    getMatrixUser,
+    getSkypeID,
+    getRoomAlias,
+    setRoomAlias,
+    isInviteNewUserEvent,
+    isTypeErrorMessage,
+    getSkypeRoomFromAliases,
+    getDisplayName,
+    toMatrixFormat,
+    getSkypeMatrixUsers,
+    getRoomName,
+    getIdFromMatrix,
+    getId,
+    getMatrixUsers,
+    getNameToSkype,
+    tagMatrixMessage,
+} = require('../src/utils');
 
 describe('Utils test', () => {
     const sender = '@senderName:mvs';
@@ -21,6 +39,11 @@ describe('Utils test', () => {
             .get(`/rooms/${roomId}/state/m.room.name`)
             .query({'access_token': puppet.token})
             .reply(200, {name: expectedData});
+    });
+
+    it('sum', () => {
+        const result = sum(matrixUserPrefix, skypePrefix, delim, 'name');
+        expect(result).to.be.equal('@8:live:name');
     });
 
     it('Test correct getDisplayName', async () => {
@@ -213,6 +236,23 @@ describe('Utils test', () => {
             } catch (error) {
                 expect(error).to.be;
             }
+        });
+    });
+
+    describe('Test isTagMatrixMessage', () => {
+        it('expect msg not to be tagged', () => {
+            const text = 'text';
+            const result = isTaggedMatrixMessage(text);
+            expect(result).to.be.false;
+
+            const func = () => isTaggedMatrixMessage(text) || '!!!';
+            expect(func()).to.be.equal('!!!');
+        });
+
+        it('expect msg to be tagged', () => {
+            const text = tagMatrixMessage('text');
+            const result = isTaggedMatrixMessage(text);
+            expect(result).to.be.true;
         });
     });
 });
