@@ -1,6 +1,6 @@
 const log = require('../../modules/log')(module);
 const handlers = require('./handlers');
-const {isTaggedMatrixMessage} = require('../../utils');
+const {isTaggedMatrixMessage, isIgnoreMemberEvent} = require('../../utils');
 
 module.exports = state => (req, _context) => {
     const {handleMatrixMessageEvent, handleMatrixMemberEvent} = handlers(state);
@@ -12,7 +12,7 @@ module.exports = state => (req, _context) => {
             return isTaggedMatrixMessage(data.content.body) || handleMatrixMessageEvent(data);
         case 'm.room.member':
             log.debug('incoming member event. data:', data);
-            return handleMatrixMemberEvent(data);
+            return isIgnoreMemberEvent(state.puppet.getUserId(), data) || handleMatrixMemberEvent(data);
         default:
             break;
     }

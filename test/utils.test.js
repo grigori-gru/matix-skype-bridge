@@ -14,7 +14,7 @@ const {
     getSkypeID,
     getRoomAlias,
     setRoomAlias,
-    isInviteNewUserEvent,
+    isIgnoreMemberEvent,
     isTypeErrorMessage,
     getSkypeRoomFromAliases,
     getDisplayName,
@@ -196,23 +196,23 @@ describe('Utils test', () => {
         expect(result).not.to.be;
     });
 
-    describe('Test isInviteNewUserEvent', () => {
+    describe('Test isIgnoreMemberEvent', () => {
         const puppetName = 'newskypebot';
         const puppetId = getMatrixUser(puppetName);
 
         it('Expect to be truth if we get event for inviting new user', () => {
-            const result = isInviteNewUserEvent(puppetId, ghostEventData);
-            expect(result).to.be.true;
+            const result = isIgnoreMemberEvent(puppetId, ghostEventData);
+            expect(result).not.to.be;
         });
 
         it('Expect to be false if we get event for inviting puppet', () => {
-            const result = isInviteNewUserEvent(puppetId, puppetEventData);
-            expect(result).not.to.be;
+            const result = isIgnoreMemberEvent(puppetId, puppetEventData);
+            expect(result).to.be;
         });
 
         it('Expect to be false if we get event for inviting bot', () => {
-            const result = isInviteNewUserEvent(puppetId, skypebotEventData);
-            expect(result).not.to.be;
+            const result = isIgnoreMemberEvent(puppetId, skypebotEventData);
+            expect(result).to.be;
         });
     });
 

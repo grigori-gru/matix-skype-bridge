@@ -1,11 +1,12 @@
 const concatStream = require('concat-stream');
 const needle = require('needle');
 const mime = require('mime-types');
-const urlParse = require('url').parse;
+const {parse: urlParse} = require('url');
 const fetch = require('node-fetch');
 const querystring = require('querystring');
 const {AllHtmlEntities: Entities} = require('html-entities');
 const entities = new Entities();
+
 const log = require('./modules/log')(module);
 const {textMatrixType, skypeTypePrefix, servicePrefix, bridge, puppet, SKYPE_USERS_TO_IGNORE, URL_BASE, deduplicationTag, deduplicationTagRegex, skypePrefix, matrixUserTag, delim, matrixRoomTag} = require('./config.js');
 const {domain} = bridge;
@@ -52,6 +53,13 @@ const isMatrixAlias = (alias = '') => alias.includes(matrixAliasPat);
 
 const getPrefix = (matrixTag, prefix) => sum(matrixTag, prefix);
 
+const inviteMessage = isTagged =>
+    (isTagged ? 'Ignoring tagged message, it was sent by the bridge' : 'No tag. Start handle');
+
+const tagMessage = isTagged =>
+    (isTagged ? 'Ignoring event, it\'s unexpected' : 'Should handle this event.');
+
+
 const utils = {
     sum,
 
@@ -62,18 +70,19 @@ const utils = {
     tag: (text = '', sender) =>
         autoTagger(sender, utils.tagMatrixMessage)(deskypeify(text)),
 
-    tagMessage: isTagged =>
-        (isTagged ? 'Ignoring tagged message, it was sent by the bridge' : 'No tag. Start handle'),
-
     isTaggedMatrixMessage: text => {
         const isTagged = deduplicationTagRegex.test(text);
-        log.info(utils.tagMessage(isTagged));
+        log.info(tagMessage(isTagged));
         return isTagged;
     },
 
 
     // ********Name/Alias constructor**********
     // Create or transform matrix/skype names, id, alias to form for each other
+
+    // This one should be made over
+    getAvatarUrl: id => `https://avatars.skype.com/v1/avatars/${entities.encode(utils.getNameFromId(id))}/public?returnDefaultImage=false&cacheHeaders=true`,
+
     getServiceName: (id, prefix = servicePrefix) => sum(prefix, id),
 
     getNameDomain: name => sum(name, delim, domain),
@@ -87,8 +96,6 @@ const utils = {
     getSkypeID: (name, prefix = skypePrefix) => sum(prefix, delim, name),
 
     getNameFromId: id => id.substr(id.indexOf(delim) + 1),
-
-    getAvatarUrl: id => `https://avatars.skype.com/v1/avatars/${entities.encode(utils.getNameFromId(id))}/public?returnDefaultImage=false&cacheHeaders=true`,
 
     getMatrixRoomAlias: skypeConverstaion => utils.toMatrixFormat(skypeConverstaion),
 
@@ -161,10 +168,15 @@ const utils = {
             .filter(user => !SKYPE_USERS_TO_IGNORE.includes(user))
             .map(user => utils.getMatrixUser(utils.getNameFromSkypeId(user))),
 
+    getSkypeConverstionType: (type = '') =>
+        (type.toLowerCase() === 'conversation' ? 'Skype Direct Message' : 'Skype Group Chat'),
 
     // **********Predicates***************
-    isInviteNewUserEvent: (puppetId, {membership, state_key: invitedUser}) =>
-        (membership === 'invite' && invitedUser.includes(servicePrefix) && invitedUser !== puppetId),
+    isIgnoreMemberEvent: (puppetId, {membership, state_key: invitedUser}) => {
+        const isIgnore = !(membership === 'invite' && invitedUser.includes(servicePrefix) && invitedUser !== puppetId);
+        log.info(inviteMessage(isIgnore));
+        return isIgnore;
+    },
 
     isTypeErrorMessage: err =>
         ['ressource.messageType', 'EventMessage.resourceType'].reduce((acc, val) =>

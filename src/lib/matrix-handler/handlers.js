@@ -1,5 +1,5 @@
 const log = require('../../modules/log')(module);
-const {getRoomName, tagMatrixMessage, getRoomAlias, getDisplayName, setRoomAlias, getSkypeMatrixUsers, isInviteNewUserEvent, getSkypeRoomFromAliases} = require('../../utils');
+const {getRoomName, tagMatrixMessage, getRoomAlias, getDisplayName, setRoomAlias, getSkypeMatrixUsers, getSkypeRoomFromAliases} = require('../../utils');
 const skypeApi = require('../skype-lib/client');
 const {textMatrixType} = require('../../config');
 
@@ -22,51 +22,49 @@ module.exports = ({puppet, bridge, skypeClient}) => {
         }
     };
 
+    const getJoinedUsers = async (invitedUser, matrixRoomId) => {
+        const bot = bridge.getBot();
+        const botClient = bot.getClient();
+        const invitedUserIntent = bridge.getIntent(invitedUser);
+
+        await invitedUserIntent.join(matrixRoomId);
+        await invitedUserIntent.invite(matrixRoomId, puppet.getUserId());
+        await invitedUserIntent.invite(matrixRoomId, bot.getUserId());
+        await puppet.joinRoom(matrixRoomId);
+        await botClient.joinRoom(matrixRoomId);
+
+        return bot.getJoinedMembers(matrixRoomId);
+    };
+
+    const createSkypeConversation = async (invitedUser, matrixRoomId) => {
+        const matrixRoomJoinedUsers = await getJoinedUsers(invitedUser, matrixRoomId);
+        const roomName = await getRoomName(matrixRoomId);
+        const newSkypeConversation = await createConversation(matrixRoomJoinedUsers, roomName);
+        const alias = getRoomAlias(newSkypeConversation);
+
+        return setRoomAlias(matrixRoomId, alias);
+    };
+
     return {
-        handleMatrixMemberEvent: async data => {
+        handleMatrixMemberEvent: ({room_id: matrixRoomId, state_key: invitedUser}) => {
             try {
-                const {room_id: matrixRoomId, state_key: invitedUser} = data;
-                if (!isInviteNewUserEvent(puppet.getUserId(), data)) {
-                    log.debug('ignored a matrix event');
-                    return;
-                }
-
                 const skypeConversation = getSkypeConversation(matrixRoomId);
+                const action = skypeConversation ? inviteUserToSkypeConversation : createSkypeConversation;
 
-                if (skypeConversation) {
-                    return inviteUserToSkypeConversation(invitedUser, matrixRoomId);
-                }
-
-                const bot = bridge.getBot();
-                const botClient = bot.getClient();
-                const invitedUserIntent = bridge.getIntent(invitedUser);
-
-                await invitedUserIntent.join(matrixRoomId);
-                await invitedUserIntent.invite(matrixRoomId, puppet.getUserId());
-                await invitedUserIntent.invite(matrixRoomId, bot.getUserId());
-                await puppet.joinRoom(matrixRoomId);
-                await botClient.joinRoom(matrixRoomId);
-
-                const usersCollection = await bot.getJoinedMembers(matrixRoomId);
-                const roomName = await getRoomName(matrixRoomId);
-                const newSkypeConversation = await createConversation(usersCollection, roomName);
-                const alias = getRoomAlias(newSkypeConversation);
-
-                return setRoomAlias(matrixRoomId, alias);
+                return action(invitedUser, matrixRoomId);
             } catch (err) {
                 log.error(err);
             }
         },
 
-        handleMatrixMessageEvent: async data => {
-            const {room_id: roomId, content: {body, msgtype}} = data;
+        handleMatrixMessageEvent: async ({sender, room_id: roomId, content: {body, msgtype}}) => {
             try {
                 const skypeConversation = getSkypeConversation(roomId);
                 switch (msgtype) {
                     case textMatrixType: {
                         log.debug('text message from riot');
                         const msg = tagMatrixMessage(body);
-                        const displayName = await getDisplayName(data.sender);
+                        const displayName = await getDisplayName(sender);
 
                         return sendTextToSkype(skypeConversation, msg, displayName);
                     }
