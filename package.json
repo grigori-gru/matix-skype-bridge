@@ -28,32 +28,32 @@
     "pre-commit": [
         "lint",
         "test"
-      ],
+    ],
     "dependencies": {
-        "readline-sync": "*",
-        "matrix-appservice-bridge": "*",
-        "concat-stream": "^1.6.0",
-        "html-entities": "^1.2.1",
-        "mime-types": "^2.1.14",
-        "needle": "^1.4.5",
-        "node-fetch": "^1.7.3",
+        "readline-sync": "1.4.9",
+        "matrix-appservice-bridge": "1.4.0",
+        "concat-stream": "1.6.2",
+        "html-entities": "1.2.1",
+        "mime-types": "2.1.18",
+        "needle": "2.2.1",
+        "node-fetch": "2.1.2",
         "skype-http": "0.0.15",
-        "striptags": "^3.0.1",
-        "winston": "^2.4.0",
-        "winston-daily-rotate-file": "^1.7.2"
+        "striptags": "3.1.1",
+        "winston": "2.4.2",
+        "winston-daily-rotate-file": "3.1.4"
     },
     "devDependencies": {
-        "chai": "*",
-        "chai-http": "*",
-        "eslint": "*",
-        "eslint-config-google": "*",
-        "eslint-plugin-chai-friendly": "^0.4.1",
-        "mocha": "*",
-        "nock": "*",
-        "nyc": "*",
-        "pre-commit": "^1.2.2",
-        "proxyquire": "*",
-        "sinon": "*",
-        "sinon-chai": "*"
+        "chai": "4.1.2",
+        "chai-http": "4.0.0",
+        "eslint": "4.19.1",
+        "eslint-config-google": "0.9.1",
+        "eslint-plugin-chai-friendly": "0.4.1",
+        "mocha": "5.2.0",
+        "nock": "9.2.6",
+        "nyc": "11.8.0",
+        "pre-commit": "1.2.2",
+        "proxyquire": "2.0.1",
+        "sinon": "5.0.7",
+        "sinon-chai": "3.1.0"
     }
 }

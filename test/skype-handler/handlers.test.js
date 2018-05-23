@@ -131,7 +131,7 @@ describe('Skype Handler testing', () => {
         expect(sendMessageStub).to.be.calledWithExactly(matrixRoomId, body);
 
         const {members} = skypeClientMock.getConversation(messageData.conversation);
-        expect(puppetStub.invite).to.be.calledWithExactly(matrixRoomId, getMatrixUsers(members));
+        expect(puppetStub.invite).to.be.calledWithExactly(matrixRoomId, getMatrixUsers(members, ''));
     });
 
     it('expect messageHandler to have throw error inside and not to return anything or to be thrown', async () => {
@@ -160,7 +160,7 @@ describe('Skype Handler testing', () => {
         expect(sendMessageStub).to.be.calledWithExactly(matrixRoomId, body);
         expect(puppetStub.saveRoom).to.be.calledWithExactly(matrixRoomId, roomId);
         const {members} = skypeClientMock.getConversation(messageData.conversation);
-        expect(puppetStub.invite).to.be.calledWithExactly(matrixRoomId, getMatrixUsers(members));
+        expect(puppetStub.invite).to.be.calledWithExactly(matrixRoomId, getMatrixUsers(members, ''));
     });
 
     it('expect getIntentFromSkype to create new name and avatar', async () => {
@@ -170,7 +170,7 @@ describe('Skype Handler testing', () => {
         bridgeIntentStub.getProfileInfo.withArgs('fake').returns({});
         bridgeIntentStub.setDisplayName.resolves();
         getBufferAndTypeStub.resolves({buffer: 'buffer', type: 'type'});
-        await getIntentFomSkypeSender('userId', 'name', 'htttp://avatarUrl');
+        await getIntentFomSkypeSender(matrixRoomId, 'userId', 'name', 'htttp://avatarUrl');
 
         expect(bridgeIntentStub.setAvatarUrl).to.be.calledWithExactly(contentUrl);
     });

@@ -142,7 +142,7 @@ const utils = {
     getTextContent: (name, text) => sum(name, delim, '\n', text),
 
     getInvitedUsers: (skypeRoomMembers, matrixRoomMembers) => {
-        const result = utils.getMatrixUsers(skypeRoomMembers)
+        const result = utils.getMatrixUsers(skypeRoomMembers, '')
             .filter(user => !matrixRoomMembers.includes(user));
         return result.length > 0 ? result : null;
     },
@@ -163,10 +163,10 @@ const utils = {
         return body;
     },
 
-    getMatrixUsers: users =>
+    getMatrixUsers: (users, prefix) =>
         users
             .filter(user => !SKYPE_USERS_TO_IGNORE.includes(user))
-            .map(user => utils.getMatrixUser(utils.getNameFromSkypeId(user))),
+            .map(user => utils.getMatrixUser(utils.getNameFromSkypeId(user), prefix)),
 
     getSkypeConverstionType: (type = '') =>
         (type.toLowerCase() === 'conversation' ? 'Skype Direct Message' : 'Skype Group Chat'),
