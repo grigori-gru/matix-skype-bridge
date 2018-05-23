@@ -1,9 +1,9 @@
 // const fs = require('fs');
 // const tmp = require('tmp');
 const log = require('../../modules/log')(module);
-const {getSkypeMatrixUsers, getRoomId, getBody, toMatrixFormat, toSkypeFormat, getAvatarUrl, getNameFromId, isSkypeId, getTextContent} = require('../../utils');
+const {getSkypeConverstionType, getSkypeMatrixUsers, getMatrixRoomId, getBody, toMatrixFormat, toSkypeFormat, getAvatarUrl, getNameFromId, isSkypeId, getTextContent, getSkypeID} = require('../../utils');
 const {deskypeify, skypeify} = require('./skypeify');
-
+const {skypeTypePrefix} = require('../../config');
 
 module.exports = api => {
     const getContact = async id => {
@@ -33,7 +33,7 @@ module.exports = api => {
         return {...output, senderId: toMatrixFormat(sender)};
     };
 
-    const getSkypeBotId = () => `8:${api.context.username}`;
+    const getSkypeBotId = () => getSkypeID(api.context.username, skypeTypePrefix);
 
     const createSkypeConversation = async (roomName, allUsers) => {
         log.debug('Create Skype conversation with name %s and users:', roomName, allUsers);
@@ -66,11 +66,11 @@ module.exports = api => {
         },
 
 
-        sendTextToSkype: (id, text, sender) => {
+        sendTextToSkype: async (conversationId, text, sender) => {
             try {
                 const textContent = skypeify(getTextContent(sender, text));
-
-                return api.sendMessage({textContent}, id);
+                await api.sendMessage({textContent}, conversationId);
+                log.info('Message %s from %s succesfully sent to conversation %s', text, sender, conversationId);
             } catch (error) {
                 throw new Error(error);
             }
@@ -109,7 +109,7 @@ module.exports = api => {
 
         getPayload: async ({content, conversation, from: {raw: sender}, html}) => {
             const userData = await getUserData(sender);
-            const roomId = getRoomId(conversation);
+            const roomId = getMatrixRoomId(conversation);
             const body = getBody(content, userData.senderId, html);
 
             return {body, userData, roomId};
@@ -118,7 +118,7 @@ module.exports = api => {
         getSkypeRoomData: async id => {
             try {
                 const skypeConversation = await api.getConversation(toSkypeFormat(id));
-                const topic = skypeConversation.type.toLowerCase() === 'conversation' ? 'Skype Direct Message' : 'Skype Group Chat';
+                const topic = getSkypeConverstionType(skypeConversation.type);
                 const name = deskypeify(skypeConversation.threadProperties.topic) || topic;
                 log.debug('got skype room data', {name, topic});
 

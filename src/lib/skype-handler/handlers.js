@@ -2,7 +2,7 @@ const path = require('path');
 // const fs = require('fs');
 
 const log = require('../../modules/log')(module);
-const {getRoomAlias, getRoomAliasName, getMatrixUser, getBufferAndType, getMatrixRoomAlias, getInvitedUsers} = require('../../utils');
+const {toSkypeFormat, getRoomAlias, getServiceName: getRoomAliasName, getMatrixUser, getBufferAndType, getMatrixRoomAlias, getInvitedUsers} = require('../../utils');
 const skypeLib = require('../skype-lib/client');
 
 module.exports = state => {
@@ -43,7 +43,7 @@ module.exports = state => {
 
     const getUserClient = async (roomId, userData, doNotTryToGetRemoteUserStoreData) => {
         const {senderId, senderName, avatarUrl} = userData;
-        log.debug('get user client for skype user %s (%s)', senderId, senderName);
+        log.debug('get user client for skype user %s (%s)', toSkypeFormat(senderId), senderName);
 
         if (!senderId) {
             return puppet.getClient();
@@ -149,7 +149,7 @@ module.exports = state => {
 
     //         const opts = {
     //             body: tag(url || path || text),
-    //             msgtype: 'm.text',
+    //             msgtype: textMatrixType,
     //         };
     //         return client.sendMessage(matrixRoomId, opts);
     //     });

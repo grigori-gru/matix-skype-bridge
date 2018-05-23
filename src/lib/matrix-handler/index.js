@@ -1,6 +1,6 @@
 const log = require('../../modules/log')(module);
 const handlers = require('./handlers');
-const {isTaggedMatrixMessage} = require('../../utils');
+const {isTaggedMatrixMessage, isIgnoreMemberEvent} = require('../../utils');
 
 module.exports = state => (req, _context) => {
     const {handleMatrixMessageEvent, handleMatrixMemberEvent} = handlers(state);
@@ -8,15 +8,11 @@ module.exports = state => (req, _context) => {
 
     switch (data.type) {
         case 'm.room.message':
-            log.debug('incoming message. data:', data);
-            if (isTaggedMatrixMessage(data.content.body)) {
-                log.debug('ignoring tagged message, it was sent by the bridge');
-                return;
-            }
-            return handleMatrixMessageEvent(data);
+            log.debug('incoming message event. data:', data);
+            return isTaggedMatrixMessage(data.content.body) || handleMatrixMessageEvent(data);
         case 'm.room.member':
-            log.debug('incoming message. data:', data);
-            return handleMatrixMemberEvent(data);
+            log.debug('incoming member event. data:', data);
+            return isIgnoreMemberEvent(state.puppet.getUserId(), data) || handleMatrixMemberEvent(data);
         default:
             break;
     }

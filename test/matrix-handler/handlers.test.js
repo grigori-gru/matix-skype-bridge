@@ -9,8 +9,6 @@ const {Bridge, Intent} = require('matrix-appservice-bridge');
 // const log = require('../../src/modules/log')(module);
 
 const {data: ghostEventData} = require('../fixtures/matrix/member-ghost.json');
-const {data: puppetEventData} = require('../fixtures/matrix/member-puppet.json');
-const {data: skypebotEventData} = require('../fixtures/matrix/member-skypebot.json');
 const {data: textEventData} = require('../fixtures/matrix/text.msg.json');
 
 const Puppet = require('../../src/puppet');
@@ -189,10 +187,6 @@ describe('Integ matrix member event handler test', () => {
         puppetStub.getMatrixRoomById.reset();
         joinRoomStub.reset();
     });
-    it('Ignore invite puppet event', async () => {
-        await handleMatrixMemberEvent(puppetEventData);
-        expect(logDebugStub).to.be.calledWithExactly('ignored a matrix event');
-    });
 
     it('Handle invite ghost event if skype conversation is already exists', async () => {
         const existRoom = 'existRoom';
@@ -231,10 +225,5 @@ describe('Integ matrix member event handler test', () => {
 
         expect(setRoomAliasStub).to.be.calledWithExactly(matrixRoomId,
             getRoomAlias(toMatrixFormat(newSkypeConversation)));
-    });
-
-    it('Ignore invite skypebot event', async () => {
-        await handleMatrixMemberEvent(skypebotEventData);
-        expect(logDebugStub).to.be.calledWithExactly('ignored a matrix event');
     });
 });
