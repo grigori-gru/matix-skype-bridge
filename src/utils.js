@@ -7,11 +7,10 @@ const querystring = require('querystring');
 const {AllHtmlEntities: Entities} = require('html-entities');
 const entities = new Entities();
 const log = require('./modules/log')(module);
-const {servicePrefix, bridge, puppet, SKYPE_USERS_TO_IGNORE, URL_BASE, deduplicationTag, deduplicationTagRegex, skypePrefix, matrixUserPrefix, delim, matrixRoomAliasPrefix} = require('./config.js');
+const {textMatrixType, skypeTypePrefix, servicePrefix, bridge, puppet, SKYPE_USERS_TO_IGNORE, URL_BASE, deduplicationTag, deduplicationTagRegex, skypePrefix, matrixUserTag, delim, matrixRoomTag} = require('./config.js');
 const {domain} = bridge;
 const {deskypeify} = require('./lib/skype-lib/skypeify');
 
-const patt = new RegExp(`^#${servicePrefix}(.+)$`);
 // // check if tag is right before file extension
 // const FILENAME_TAG_PATTERN = /^.+_mx_\..+$/;
 
@@ -45,13 +44,20 @@ const getUrl = (arg, type) => {
     return result[type];
 };
 
-const sum = (...elems) => ''.concat(...elems);
+const sum = (...elems) => elems.join('');
+
+const matrixAliasPat = sum(matrixRoomTag, servicePrefix);
+
+const isMatrixAlias = (alias = '') => alias.includes(matrixAliasPat);
+
+const getPrefix = (matrixTag, prefix) => sum(matrixTag, prefix);
 
 const utils = {
     sum,
+
     // *******Tag part******
     // Helps to check if our message is from our service or not
-    tagMatrixMessage: text => `${text}${deduplicationTag}`,
+    tagMatrixMessage: text => sum(text, deduplicationTag),
 
     tag: (text = '', sender) =>
         autoTagger(sender, utils.tagMatrixMessage)(deskypeify(text)),
@@ -73,12 +79,12 @@ const utils = {
     getNameDomain: name => sum(name, delim, domain),
 
     getMatrixUser: (id, prefix = servicePrefix) =>
-        sum(matrixUserPrefix, utils.getNameDomain(utils.getServiceName(id, prefix))),
+        sum(matrixUserTag, utils.getNameDomain(utils.getServiceName(id, prefix))),
 
     getRoomAlias: (id, prefix = servicePrefix) =>
-        sum(matrixRoomAliasPrefix, utils.getNameDomain(utils.getServiceName(id, prefix))),
+        sum(matrixRoomTag, utils.getNameDomain(utils.getServiceName(id, prefix))),
 
-    getSkypeID: name => sum(skypePrefix, delim, name),
+    getSkypeID: (name, prefix = skypePrefix) => sum(prefix, delim, name),
 
     getNameFromId: id => id.substr(id.indexOf(delim) + 1),
 
@@ -87,6 +93,11 @@ const utils = {
     getMatrixRoomAlias: skypeConverstaion => utils.toMatrixFormat(skypeConverstaion),
 
     getMatrixRoomId: conversation => utils.toMatrixFormat(conversation).replace(delim, '^'),
+
+    getNameFromSkypeId: name => {
+        const prefix = name.includes(skypePrefix) ? skypePrefix : skypeTypePrefix;
+        return name.replace(sum(prefix, delim), '');
+    },
 
     toMatrixFormat: str => {
         if (str) {
@@ -104,18 +115,18 @@ const utils = {
 
 
     // ********Skype<>Matrix utils**********
-    getIdFromMatrix: (user, prefix = '') => {
-        const [result] = user.replace(sum(matrixUserPrefix, prefix), '').split(delim);
+    getIdFromMatrix: (user, prefix = '', matrixTag = matrixUserTag) => {
+        const [result] = user.replace(getPrefix(matrixTag, prefix), '').split(delim);
         return result;
     },
 
-    getId: user =>
+    getUserId: (user = '', tag = matrixUserTag) =>
         (user.includes(servicePrefix) ?
-            utils.toSkypeFormat(utils.getIdFromMatrix(user, servicePrefix)) :
+            utils.toSkypeFormat(utils.getIdFromMatrix(user, servicePrefix, tag)) :
             utils.getSkypeID(utils.getIdFromMatrix(user))),
 
     getSkypeMatrixUsers: (skypeCollection = [], matrixRoomUsers) => {
-        const usersIds = matrixRoomUsers.map(user => utils.getId(user));
+        const usersIds = matrixRoomUsers.map(user => utils.getUserId(user));
         return skypeCollection
             .map(({personId}) => personId)
             .filter(id => usersIds.includes(id));
@@ -129,22 +140,13 @@ const utils = {
         return result.length > 0 ? result : null;
     },
 
-    getSkypeRoomFromAliases: aliases => {
-        if (!aliases) {
-            return;
-        }
-        const result = aliases.reduce((result, alias) => {
-            const localpart = alias.replace(sum(delim, domain), '');
-            const matches = localpart.match(patt);
-            return matches ? matches[1] : result;
-        }, null);
-        return utils.toSkypeFormat(result);
-    },
+    getSkypeRoomFromAliases: (aliases = []) =>
+        utils.getUserId(aliases.find(isMatrixAlias), matrixRoomTag),
 
     getBody: (content, senderId, html) => {
         const body = {
             body: utils.tag(content, senderId),
-            msgtype: 'm.text',
+            msgtype: textMatrixType,
         };
         // if (html) {
         //     // eslint-disable-next-line
@@ -153,6 +155,11 @@ const utils = {
         // }
         return body;
     },
+
+    getMatrixUsers: users =>
+        users
+            .filter(user => !SKYPE_USERS_TO_IGNORE.includes(user))
+            .map(user => utils.getMatrixUser(utils.getNameFromSkypeId(user))),
 
 
     // **********Predicates***************
@@ -174,7 +181,6 @@ const utils = {
     setRoomAlias: (roomId, alias) => {
         const url = getUrl(alias, 'setRoomUrl');
         const body = {'room_id': roomId};
-        log.debug('roomId', roomId);
         return fetch(url, {
             method: 'PUT',
             body: JSON.stringify(body),
@@ -214,12 +220,6 @@ const utils = {
                 return result;
             });
     },
-
-    getMatrixUsers: users =>
-        users
-            .filter(user => !SKYPE_USERS_TO_IGNORE.includes(user))
-            .map(user =>
-                `@${user.split(delim).pop()}:${domain}`),
 
     getBufferAndType: (url, data) =>
         downloadGetBufferAndHeaders(url, data)

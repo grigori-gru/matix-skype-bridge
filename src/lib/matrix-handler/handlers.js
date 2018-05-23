@@ -1,6 +1,7 @@
 const log = require('../../modules/log')(module);
 const {getRoomName, tagMatrixMessage, getRoomAlias, getDisplayName, setRoomAlias, getSkypeMatrixUsers, isInviteNewUserEvent, getSkypeRoomFromAliases} = require('../../utils');
 const skypeApi = require('../skype-lib/client');
+const {textMatrixType} = require('../../config');
 
 module.exports = ({puppet, bridge, skypeClient}) => {
     const {createConversation, sendTextToSkype} = skypeApi(skypeClient);
@@ -62,9 +63,9 @@ module.exports = ({puppet, bridge, skypeClient}) => {
             try {
                 const skypeConversation = getSkypeConversation(roomId);
                 switch (msgtype) {
-                    case 'm.text': {
-                        const msg = tagMatrixMessage(body);
+                    case textMatrixType: {
                         log.debug('text message from riot');
+                        const msg = tagMatrixMessage(body);
                         const displayName = await getDisplayName(data.sender);
 
                         return sendTextToSkype(skypeConversation, msg, displayName);

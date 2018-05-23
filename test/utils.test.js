@@ -1,10 +1,13 @@
 const nock = require('nock');
 const {expect} = require('chai');
-const {matrixUserPrefix, delim, skypePrefix, puppet, bridge, URL_BASE} = require('../src/config.js');
+const {servicePrefix, SKYPE_USERS_TO_IGNORE, matrixUserTag, delim, skypePrefix, puppet, URL_BASE, skypeTypePrefix} = require('../src/config.js');
 const {data: ghostEventData} = require('./fixtures/matrix/member-ghost.json');
 const {data: puppetEventData} = require('./fixtures/matrix/member-puppet.json');
 const {data: skypebotEventData} = require('./fixtures/matrix/member-skypebot.json');
+// const log = require('../src/modules/log')(module);
+
 const {
+    getNameFromSkypeId,
     isTaggedMatrixMessage,
     sum,
     getMatrixUser,
@@ -19,21 +22,28 @@ const {
     getSkypeMatrixUsers,
     getRoomName,
     getIdFromMatrix,
-    getId,
+    getUserId,
     getMatrixUsers,
     getNameToSkype,
     tagMatrixMessage,
 } = require('../src/utils');
 
+
 describe('Utils test', () => {
-    const sender = '@senderName:mvs';
     const expectedData = 'correct';
     const roomId = '!npBatwRCSuXWushCFs:matrix.bingo-boom.ru';
+    const name = 'name';
+    const name2 = 'name2';
+    const name3 = 'name3';
+    const name4 = 'name4';
 
+    const testSkypeId1 = getSkypeID(name);
+    const testSkypeId2 = getSkypeID(name2);
+    const testSkypeId3 = getSkypeID(name3);
     // eslint-disable-next-line
     before(() => {
         nock(URL_BASE)
-            .get(`/profile/${encodeURIComponent(sender)}/displayname`)
+            .get(`/profile/${encodeURIComponent(name)}/displayname`)
             .times(2)
             .reply(200, {displayname: expectedData})
             .get(`/rooms/${roomId}/state/m.room.name`)
@@ -42,53 +52,72 @@ describe('Utils test', () => {
     });
 
     it('sum', () => {
-        const result = sum(matrixUserPrefix, skypePrefix, delim, 'name');
-        expect(result).to.be.equal('@8:live:name');
+        const result = sum(matrixUserTag, skypePrefix, delim, name);
+        const expected = `${matrixUserTag}${skypePrefix}${delim}${name}`;
+        expect(result).to.be.equal(expected);
+    });
+
+    describe('Test getIdFromMatrix', () => {
+        it('expect we get name of matrix user if it\'s from skype', () => {
+            const user = getMatrixUser(name);
+            const result = getIdFromMatrix(user, servicePrefix);
+            expect(result).to.equal(name);
+        });
+        it('expect we get name of matrix user if it\'s default matrix user', () => {
+            const user = getMatrixUser(name, '');
+            const result = getIdFromMatrix(user);
+            expect(result).to.equal(name);
+        });
     });
 
     it('Test correct getDisplayName', async () => {
-        const result = await getDisplayName(sender);
+        const result = await getDisplayName(name);
         expect(result).to.equal(expectedData);
     });
 
-    it('Test getId', () => {
-        const skypeUser1 = getMatrixUser(toMatrixFormat('8:live:abcd'));
-        const skypeUser2 = getMatrixUser(toMatrixFormat('8:live:abcd_dcba'));
-        const users = [skypeUser1, '@gv_grudinin:matrix:bingo-boom.ru', skypeUser2];
+    describe('test getNameFromSkypeId', () => {
+        it('expect to be ok from default prefix', () => {
+            const matrixUser = getSkypeID(name);
+            const expectedName = getNameFromSkypeId(matrixUser);
+            expect(expectedName).to.be.equal(name);
+        });
 
-        // eslint-disable-next-line
-        const result = users.map(user => getId(user));
-        const expected = ['8:live:abcd', '8:live:gv_grudinin', '8:live:abcd_dcba'];
-        expect(result).to.deep.equal(expected);
+        it('expect to be ok from typePrefix', () => {
+            const matrixUser = getSkypeID(name, skypeTypePrefix);
+            const expectedName = getNameFromSkypeId(matrixUser);
+            expect(expectedName).to.be.equal(name);
+        });
     });
 
-    it('Test getIdFromMatrix', () => {
-        const user = '@skype_user:matrix.bingo-boom.ru';
-        const expected = 'user';
-        const result = getIdFromMatrix(user, 'skype_');
-        expect(result).to.equal(expected);
+    it('Test getUserId', () => {
+        const skypeUser1 = getMatrixUser(toMatrixFormat(testSkypeId1));
+        const skypeUser2 = getMatrixUser(toMatrixFormat(testSkypeId2));
+        const skypeUser3 = getMatrixUser((name3), '');
+        const users = [skypeUser1, skypeUser2, skypeUser3];
+        // eslint-disable-next-line
+        const result = users.map(user => getUserId(user));
+        const expected = [testSkypeId1, testSkypeId2, testSkypeId3];
+        expect(result).to.deep.equal(expected);
     });
 
     it('Test getMatrixUsers', () => {
         const users = [
-            'a:b:c',
-            'a:b',
-            'a',
-            '8:live:ignore_1',
-            '8:live:ignore_2',
+            ...SKYPE_USERS_TO_IGNORE,
+            getSkypeID(name),
+            getSkypeID(name2, skypeTypePrefix),
         ];
+        const result = getMatrixUsers(users);
+
         const expected = [
-            `@c:${bridge.domain}`,
-            `@b:${bridge.domain}`,
-            `@a:${bridge.domain}`,
+            getMatrixUser(name),
+            getMatrixUser(name2),
         ];
 
-        const result = getMatrixUsers(users);
         expect(result).deep.equal(expected);
     });
 
     it('Get coorrect display name', async () => {
-        const result = await getNameToSkype(sender);
+        const result = await getNameToSkype(name);
         expect(result).to.equal(expectedData);
     });
 
@@ -97,61 +126,51 @@ describe('Utils test', () => {
         expect(result).to.equal(expectedData);
     });
 
-    it('Test getSkypeMatrixUsers', () => {
-        const clientCollection = [
-            {personId: '8:live:skypebottest_2'},
-            {personId: '8:live:abcdefg'},
-            {personId: '8:live:hijk'},
-        ];
-        const users = clientCollection.map(({personId}) => getMatrixUser(toMatrixFormat(personId)));
-        const result = getSkypeMatrixUsers(clientCollection, users);
-        const expected = [
-            '8:live:skypebottest_2',
-            '8:live:abcdefg',
-            '8:live:hijk',
-        ];
-        expect(result).to.deep.equal(expected);
-    });
-
-    it('Test getSkypeMatrixUsers', () => {
-        const clientCollection = [
-            {personId: '8:live:skypebottest_2'},
-            {personId: '8:live:abcdefg'},
-            {personId: '8:live:hijk'},
-        ];
-        const users = [
-            `@skype_${toMatrixFormat('8:live:skypebottest_2')}:${bridge.domain}`,
-            `@skype_${toMatrixFormat('8:live:abcdefg')}:${bridge.domain}`,
-            `@skype_${toMatrixFormat('8:live:hijk')}:${bridge.domain}`,
-        ];
-        const result = getSkypeMatrixUsers(clientCollection, users);
-        const expected = [
-            getSkypeID('skypebottest_2'),
-            getSkypeID('abcdefg'),
-            getSkypeID('hijk'),
-        ];
-        expect(result).to.deep.equal(expected);
-    });
     describe('Test getSkypeMatrixUsers', () => {
-        const roomAliases = [
-            getRoomAlias(toMatrixFormat('failAlias')),
-            getRoomAlias(toMatrixFormat('failAlias2')),
+        const toMatrix = ({personId}) => getMatrixUser(toMatrixFormat(personId));
+        const clientCollection = [
+            {personId: testSkypeId1},
+            {personId: testSkypeId2},
         ];
+        const matrixUsers = clientCollection.map(toMatrix);
+        it('expect getSkypeMatrixUsers return skuypeId\'s of matrixUsers which are inside matrixRoom and skype contacts', () => {
+            const skypeCollection = [...clientCollection, {personId: testSkypeId3}];
+            const matrixRoomUsers = [...matrixUsers, getMatrixUser(toMatrixFormat(name4))];
+            const result = getSkypeMatrixUsers(skypeCollection, matrixRoomUsers);
 
-        it('Expect getSkypeMatrixUsers return alias name for correct alias', () => {
-            const expected = 'correctAlias';
-            const expectedAlias = getRoomAlias(toMatrixFormat(expected));
-            const result = getSkypeRoomFromAliases([...roomAliases, expectedAlias]);
+            const expected = [testSkypeId1, testSkypeId2];
             expect(result).to.deep.equal(expected);
         });
 
-        it('Expect getSkypeMatrixUsers return nothing if no alias match pattern', () => {
+        it('expect getSkypeMatrixUsers return empty array if no skypeId\'s we put', () => {
+            // eslint-disable-next-line
+            const result = getSkypeMatrixUsers(undefined, matrixUsers);
+
+            const expected = [];
+            expect(result).to.deep.equal(expected);
+        });
+    });
+
+    describe('Test getSkypeRoomFromAliases', () => {
+        const roomAliases = [
+            getRoomAlias(toMatrixFormat(name), ''),
+            getRoomAlias(toMatrixFormat(name2), ''),
+        ];
+        const expectedAlias = getRoomAlias(toMatrixFormat(name3));
+
+        it('Expect getSkypeRoomFromAliases return alias name for correct alias', () => {
+            const result = getSkypeRoomFromAliases([...roomAliases, expectedAlias]);
+            expect(result).to.deep.equal(name3);
+        });
+
+        it('Expect getSkypeRoomFromAliases return nothing if no alias match pattern', () => {
             const result = getSkypeRoomFromAliases(roomAliases);
             expect(result).not.to.be;
         });
 
-        it('Expect getSkypeMatrixUsers return nothing if no alias or empty array as argument we get', () => {
-            const result = getSkypeRoomFromAliases(null);
+        it('Expect getSkypeRoomFromAliases return nothing if no alias or empty array as argument we get', () => {
+            // eslint-disable-next-line
+            const result = getSkypeRoomFromAliases(undefined);
             expect(result).not.to.be;
             const result1 = getSkypeRoomFromAliases([]);
             expect(result1).not.to.be;
@@ -178,7 +197,8 @@ describe('Utils test', () => {
     });
 
     describe('Test isInviteNewUserEvent', () => {
-        const puppetId = '@newskypebot:test.domain';
+        const puppetName = 'newskypebot';
+        const puppetId = getMatrixUser(puppetName);
 
         it('Expect to be truth if we get event for inviting new user', () => {
             const result = isInviteNewUserEvent(puppetId, ghostEventData);

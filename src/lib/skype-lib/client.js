@@ -66,11 +66,11 @@ module.exports = api => {
         },
 
 
-        sendTextToSkype: (id, text, sender) => {
+        sendTextToSkype: async (conversationId, text, sender) => {
             try {
                 const textContent = skypeify(getTextContent(sender, text));
-
-                return api.sendMessage({textContent}, id);
+                await api.sendMessage({textContent}, conversationId);
+                log.info('Message %s from %s succesfully sent to conversation %s', text, sender, conversationId);
             } catch (error) {
                 throw new Error(error);
             }
