@@ -7,6 +7,7 @@ const {data: skypebotEventData} = require('./fixtures/matrix/member-skypebot.jso
 // const log = require('../src/modules/log')(module);
 
 const {
+    getInvitedUsers,
     getNameFromSkypeId,
     isTaggedMatrixMessage,
     sum,
@@ -119,6 +120,26 @@ describe('Utils test', () => {
     it('Get coorrect display name', async () => {
         const result = await getNameToSkype(name);
         expect(result).to.equal(expectedData);
+    });
+
+    describe('test getInvitedUsers', () => {
+        it('expect to invite user for skype converstion if he is not in matrix room but his puppet in', () => {
+            const skypeUsers = [
+                ...SKYPE_USERS_TO_IGNORE,
+                getSkypeID(name),
+                getSkypeID(name2),
+            ];
+            const matrixRoomUsers = [
+                getMatrixUser(name2),
+                getMatrixUser(name, ''),
+                getMatrixUser(SKYPE_USERS_TO_IGNORE[0]),
+            ];
+            const result = getInvitedUsers(skypeUsers, matrixRoomUsers);
+            const expected = [
+                getMatrixUser(name2, ''),
+            ];
+            expect(result).to.be.deep.equal(expected);
+        });
     });
 
     it('Get room name', async () => {

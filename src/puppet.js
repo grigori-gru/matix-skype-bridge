@@ -94,8 +94,13 @@ module.exports = class Puppet {
         }
     }
 
-    invite(roomId, users) {
-        return Promise.all(users.map(user =>
+    invite(roomId, invitedUsers) {
+        if (!invitedUsers) {
+            log.debug('All members in skype skypeRoom are already joined to Matrix room: ', roomId);
+            return;
+        }
+        log.info('Users to invite', invitedUsers);
+        return Promise.all(invitedUsers.map(user =>
             this.client.invite(roomId, user)
                 .then(() => log.debug('New user %s invited to room %s', user, roomId))));
     }

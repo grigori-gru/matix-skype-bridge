@@ -2,7 +2,7 @@ const path = require('path');
 // const fs = require('fs');
 
 const log = require('../../modules/log')(module);
-const {toSkypeFormat, getRoomAlias, getServiceName: getRoomAliasName, getMatrixUser, getBufferAndType, getMatrixRoomAlias, getInvitedUsers} = require('../../utils');
+const {toSkypeFormat, getRoomAlias, getServiceName: getRoomAliasName, getMatrixUser, getBufferAndType, getInvitedUsers} = require('../../utils');
 const skypeLib = require('../skype-lib/client');
 
 module.exports = state => {
@@ -25,12 +25,14 @@ module.exports = state => {
         return ghostIntent.setAvatarUrl(contentUri);
     };
 
-    const getIntentFomSkypeSender = async (userId, name, avatarUrl) => {
+    const getIntentFomSkypeSender = async (roomId, userId, name, avatarUrl) => {
+        log.debug('this message was not sent by me');
         const ghostIntent = bridge.getIntent(getMatrixUser(userId));
         const client = ghostIntent.getClient();
 
         const {avatar_url: currentAvatarUrl, displayName} = await ghostIntent.getProfileInfo(client.credentials.userId);
         const promiseList = [];
+
         if (!displayName && name) {
             promiseList.push(ghostIntent.setDisplayName(name));
         }
@@ -38,22 +40,19 @@ module.exports = state => {
             promiseList.push(setGhostAvatar(ghostIntent, avatarUrl));
         }
 
-        return Promise.all(promiseList).then(() => ghostIntent);
-    };
-
-    const getUserClient = async (roomId, userData, doNotTryToGetRemoteUserStoreData) => {
-        const {senderId, senderName, avatarUrl} = userData;
-        log.debug('get user client for skype user %s (%s)', toSkypeFormat(senderId), senderName);
-
-        if (!senderId) {
-            return puppet.getClient();
-        }
-
-        log.debug('this message was not sent by me');
-        const ghostIntent = await getIntentFomSkypeSender(senderId, senderName, avatarUrl);
+        await Promise.all(promiseList);
         await ghostIntent.join(roomId);
 
         return ghostIntent.getClient();
+    };
+
+    const getUserClient = (roomId, userData, doNotTryToGetRemoteUserStoreData) => {
+        const {senderId, senderName, avatarUrl} = userData;
+        log.debug('get user client for skype user %s (%s)', toSkypeFormat(senderId), senderName);
+
+        return senderId ?
+            getIntentFomSkypeSender(roomId, senderId, senderName, avatarUrl) :
+            puppet.getClient();
     };
 
     const createRoom = async skypeRoomId => {
@@ -155,30 +154,22 @@ module.exports = state => {
     //     });
     // };
 
-    const sendMessage = async ({body, userData, roomId}) => {
+    const sendMessage = async ({body, userData, roomId}, matrixRoomId) => {
         log.debug('sending message with body', body);
         log.debug('from skype to Matrix room', roomId);
         log.debug('as Matrix intent', userData);
 
-        const matrixRoomId = await getMatrixRoom(roomId);
         const client = await getUserClient(matrixRoomId, userData);
         return client.sendMessage(matrixRoomId, body);
     };
 
-    const inviteSkypeConversationMembers = async skypeRoom => {
+    const inviteSkypeConversationMembers = async (skypeRoom, matrixRoomId) => {
         // TODO: find a better way to invite real matrix according to skype conversation member
         try {
             const {members: skypeRoomMembers} = await skypeClient.getConversation(skypeRoom);
-            const matrixRoomAlias = getMatrixRoomAlias(skypeRoom);
-            const matrixRoomId = await getMatrixRoom(matrixRoomAlias);
             const matrixRoomMembers = puppet.getMatrixRoomMembers(matrixRoomId);
             const invitedUsers = getInvitedUsers(skypeRoomMembers, matrixRoomMembers);
-
-            if (!invitedUsers) {
-                log.debug('All members in skype skypeRoom %s are already joined in Matrix room: ', skypeRoom, matrixRoomAlias);
-                return;
-            }
-
+            log.debug('invitedUsers', invitedUsers);
             return puppet.invite(matrixRoomId, invitedUsers);
         } catch (err) {
             log.error('inviteSkypeConversationMembers error', err);
@@ -189,9 +180,10 @@ module.exports = state => {
         messageHandler: async data => {
             try {
                 const payload = await getPayload(data);
-                await sendMessage(payload);
+                const matrixRoomId = await getMatrixRoom(payload.roomId);
+                await sendMessage(payload, matrixRoomId);
 
-                return inviteSkypeConversationMembers(data.conversation);
+                return inviteSkypeConversationMembers(data.conversation, matrixRoomId);
             } catch (err) {
                 log.error('messageHandler error', err);
             }
