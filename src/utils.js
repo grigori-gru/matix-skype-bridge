@@ -108,14 +108,14 @@ const utils = {
 
     toMatrixFormat: str => {
         if (str) {
-            return new Buffer(str).toString('base64');
+            return Buffer.from(str).toString('base64');
         }
         log.warn('unexpected data for decode');
     },
 
     toSkypeFormat: str => {
         if (str) {
-            return new Buffer(str, 'base64').toString('ascii');
+            return Buffer.from(str, 'base64').toString('ascii');
         }
         log.warn('unexpected data for decode');
     },
