@@ -14,10 +14,8 @@ module.exports = ({puppet, bridge, skypeClient}) => {
     const {createConversation, sendTextToSkype} = skypeApi(skypeClient);
 
     const getSkypeConversation = matrixRoomId => {
-        const room = puppet.getMatrixRoomById(matrixRoomId);
-        if (room) {
-            return getSkypeRoomFromAliases(room.getAliases());
-        }
+        const roomAliases = puppet.getRoomAliases(matrixRoomId);
+        return getSkypeRoomFromAliases(roomAliases);
     };
 
     const inviteUserToSkypeConversation = async (invitedUser, skypeConversation) => {
@@ -64,9 +62,9 @@ module.exports = ({puppet, bridge, skypeClient}) => {
             }
         },
 
-        handleMatrixMessageEvent: async ({sender, room_id: roomId, content: {body, msgtype}}) => {
+        handleMatrixMessageEvent: async ({sender, room_id: matrixRoomId, content: {body, msgtype}}) => {
             try {
-                const skypeConversation = getSkypeConversation(roomId);
+                const skypeConversation = getSkypeConversation(matrixRoomId);
                 switch (msgtype) {
                     case textMatrixType: {
                         log.debug('text message from riot');

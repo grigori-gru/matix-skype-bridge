@@ -177,6 +177,7 @@ module.exports = state => {
             const matrixRoomMembers = puppet.getMatrixRoomMembers(matrixRoomId);
             const invitedUsers = getInvitedUsers(skypeRoomMembers, matrixRoomMembers);
             log.debug('invitedUsers', invitedUsers);
+
             return puppet.invite(matrixRoomId, invitedUsers);
         } catch (err) {
             log.error('inviteSkypeConversationMembers error', err);
