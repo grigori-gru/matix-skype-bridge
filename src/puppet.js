@@ -6,8 +6,12 @@ const config = require('./config.js');
 const log = require('./modules/log')(module);
 
 module.exports = class Puppet {
-    constructor(jsonFile) {
-        this.jsonFile = jsonFile;
+    /**
+     *
+     * @param {string} pathToConfig path to config file
+     */
+    constructor(pathToConfig) {
+        this.pathToConfig = pathToConfig;
         this.client = null;
         this.skypeRooms = {};
     }
@@ -50,6 +54,9 @@ module.exports = class Puppet {
         return this.matrixRoomMembers[roomId] || [];
     }
 
+    /**
+     * @returns {string} matrix userId
+     */
     getUserId() {
         return this.client.credentials.userId;
     }
@@ -62,7 +69,12 @@ module.exports = class Puppet {
     getClient() {
         return this.client;
     }
-
+    /**
+     * Returns matrixRoomId byAlias
+     *
+     * @param {string} roomAlias matrix room alias
+     * @returns {string} matrix roomId
+     */
     async getRoom(roomAlias) {
         try {
             const {room_id: roomId} = await this.client.getRoomIdForAlias(roomAlias);
@@ -74,15 +86,27 @@ module.exports = class Puppet {
         }
     }
 
-    getMatrixRoomById(matrixRoomId) {
-        return this.client.getRooms()
+    /**
+     *
+     * @param {string} matrixRoomId matrix roomId
+     *
+     * @returns {string|undefined} Returns matrix roomId alaises or undefined if no room is according to matrxRoomId
+     */
+    getRoomAliases(matrixRoomId) {
+        const room = this.client.getRooms()
             .find(({roomId}) => roomId === matrixRoomId);
+        return room ? room.getAliases : room;
     }
 
-
-    async joinRoom(room) {
+    /**
+     *
+     * @param {string} matrixRoomId matrix roomId
+     *
+     * @returns {undefined|string} return undefined if puppet have joined room or err.message is not 'No known servers' returns this error message if it is
+     */
+    async joinRoom(matrixRoomId) {
         try {
-            await this.client.joinRoom(room);
+            await this.client.joinRoom(matrixRoomId);
             return;
         } catch (err) {
             if (err.message === 'No known servers') {
@@ -94,17 +118,27 @@ module.exports = class Puppet {
         }
     }
 
-    invite(roomId, invitedUsers) {
+    /**
+     *
+     * @param {*} matrixRoomId matrix roomId
+     * @param {*} invitedUsers users to invite to matrix room
+     *
+     * @returns {Promise} async invite all users to matrix room
+     */
+    invite(matrixRoomId, invitedUsers) {
         if (!invitedUsers) {
-            log.debug('All members in skype skypeRoom are already joined to Matrix room: ', roomId);
+            log.debug('All members in skype skypeRoom are already joined to Matrix room: ', matrixRoomId);
             return;
         }
         log.info('Users to invite', invitedUsers);
         return Promise.all(invitedUsers.map(user =>
-            this.client.invite(roomId, user)
-                .then(() => log.debug('New user %s invited to room %s', user, roomId))));
+            this.client.invite(matrixRoomId, user)
+                .then(() => log.debug('New user %s invited to room %s', user, matrixRoomId))));
     }
 
+    /**
+     * Method for creating puppet data and adding to config file
+     */
     async associate() {
         log.info([
             'This bridge performs matrix user puppeting.',
@@ -116,7 +150,7 @@ module.exports = class Puppet {
         const matrixClient = matrixSdk.createClient(config.bridge.homeserverUrl);
         const accessDat = await matrixClient.loginWithPassword(id, password);
         log.info('log in success');
-        await fs.writeFile(this.jsonFile, JSON.stringify({
+        await fs.writeFile(this.pathToConfig, JSON.stringify({
             ...config,
             puppet: {
                 id,
@@ -124,7 +158,7 @@ module.exports = class Puppet {
                 token: accessDat.access_token,
             },
         }, null, 2));
-        log.info(`Updated config file ${this.jsonFile}`);
+        log.info(`Updated config file ${this.pathToConfig}`);
     }
 
     /**

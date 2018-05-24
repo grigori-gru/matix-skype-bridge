@@ -163,8 +163,8 @@ const getSkypeMatrixUsers = (skypeCollection = [], matrixRoomUsers) => {
 const getTextContent = (name, text) => sum(name, delim, '\n', text);
 
 
-const getSkypeRoomFromAliases = (aliases = []) =>
-    getUserId(aliases.find(isMatrixAlias), matrixRoomTag);
+const getSkypeRoomFromAliases = aliases =>
+    (aliases ? getUserId(aliases.find(isMatrixAlias), matrixRoomTag) : aliases);
 
 const getBody = (content, senderId, html) => {
     const body = {

@@ -21,6 +21,7 @@ bridgeStub.getIntent.returns(bridgeIntentStub);
 
 const sendMessageStub = stub();
 const logWarnStub = stub();
+const logErrorStub = stub();
 const getContactsStub = stub();
 
 const userIvan = {personId: '8:abcd', mri: '8:abcd', displayName: 'Ivan Ivanov', profile: {avatarUrl: 'http://avatarIvan'}};
@@ -141,7 +142,7 @@ const handlers = proxyquire('../../src/lib/matrix-handler/handlers', {
     '../../modules/log': () => ({
         debug: logDebugStub,
         warn: logWarnStub,
-        error: stub(),
+        error: logErrorStub,
     }),
 });
 // logDebugStub.callsFake(log.debug);
@@ -152,15 +153,11 @@ describe('Integ matrix handler test', () => {
     const existRoom = 'existRoom';
 
     afterEach(() => {
-        puppetStub.getMatrixRoomById.reset();
+        puppetStub.getRoomAliases.reset();
     });
 
     it('Text message testing', async () => {
-        puppetStub.getMatrixRoomById.returns({
-            getAliases: () => [
-                getRoomAlias(toMatrixFormat(existRoom)),
-            ],
-        });
+        puppetStub.getRoomAliases.returns([getRoomAlias(toMatrixFormat(existRoom))]);
         const getDisplayName = sender => `${sender}DisplayName`;
         getDisplayNameStub.callsFake(getDisplayName);
         await handleMatrixMessageEvent(textEventData);
@@ -184,7 +181,7 @@ describe('Integ matrix handler test', () => {
 describe('Integ matrix member event handler test', () => {
     afterEach(() => {
         logDebugStub.reset();
-        puppetStub.getMatrixRoomById.reset();
+        puppetStub.getRoomAliases.reset();
         joinRoomStub.reset();
     });
 
@@ -194,11 +191,7 @@ describe('Integ matrix member event handler test', () => {
         const skypeRoomName = 'skypeRoomName';
         getRoomNameStub.returns(skypeRoomName);
 
-        puppetStub.getMatrixRoomById.returns({
-            getAliases: () => [
-                getRoomAlias(toMatrixFormat(existRoom)),
-            ],
-        });
+        puppetStub.getRoomAliases.returns([getRoomAlias(toMatrixFormat(existRoom))]);
 
         await handleMatrixMemberEvent(ghostEventData);
 
@@ -216,6 +209,7 @@ describe('Integ matrix member event handler test', () => {
 
         await handleMatrixMemberEvent(ghostEventData);
 
+        expect(logErrorStub).not.to.be.called;
         expect(logDebugStub).not.to.be.calledWithExactly('ignored a matrix event');
         expect(bridgeBot.getJoinedMembers).to.be.calledWithExactly(matrixRoomId);
         expect(joinRoomStub).to.be.calledWithExactly(matrixRoomId);
