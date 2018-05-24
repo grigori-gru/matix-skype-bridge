@@ -2,8 +2,15 @@ const path = require('path');
 // const fs = require('fs');
 
 const log = require('../../modules/log')(module);
-const {toSkypeFormat, getRoomAlias, getServiceName: getRoomAliasName, getMatrixUser, getBufferAndType, getInvitedUsers} = require('../../utils');
 const skypeLib = require('../skype-lib/client');
+const {
+    toSkypeFormat,
+    getRoomAlias,
+    getServiceName: getRoomAliasName,
+    getMatrixUser,
+    getBufferAndType,
+    getInvitedUsers,
+} = require('../../utils');
 
 module.exports = state => {
     const {puppet, skypeClient, bridge} = state;

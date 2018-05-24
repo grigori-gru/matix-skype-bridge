@@ -1,9 +1,20 @@
 // const fs = require('fs');
 // const tmp = require('tmp');
 const log = require('../../modules/log')(module);
-const {getSkypeConverstionType, getSkypeMatrixUsers, getMatrixRoomId, getBody, toMatrixFormat, toSkypeFormat, getAvatarUrl, getNameFromId, isSkypeId, getTextContent, getSkypeID} = require('../../utils');
 const {deskypeify, skypeify} = require('./skypeify');
 const {skypeTypePrefix} = require('../../config');
+const {
+    getSkypeConverstionType,
+    getSkypeMatrixUsers,
+    getMatrixRoomId,
+    getBody,
+    toMatrixFormat,
+    toSkypeFormat,
+    getAvatarUrl,
+    getNameFromId,
+    getTextContent,
+    getSkypeID,
+} = require('../../utils');
 
 module.exports = api => {
     const getContact = async id => {
@@ -14,23 +25,16 @@ module.exports = api => {
     };
 
     const getUserData = async sender => {
-        const output = {};
         if (!sender) {
-            return output;
+            return {};
         }
         const contact = await getContact(sender);
 
-        if (contact) {
-            output.senderName = contact.displayName;
-            output.avatarUrl = contact.profile.avatarUrl;
-        } else if (isSkypeId(sender)) {
-            output.senderName = getNameFromId(sender);
-            output.avatarUrl = getAvatarUrl(sender);
-        } else {
-            output.senderName = sender;
-        }
+        const senderName = contact ? contact.displayName : getNameFromId(sender);
+        const avatarUrl = contact ? contact.profile.avatarUrl : getAvatarUrl(sender);
+        const senderId = toMatrixFormat(sender);
 
-        return {...output, senderId: toMatrixFormat(sender)};
+        return {senderName, avatarUrl, senderId};
     };
 
     const getSkypeBotId = () => getSkypeID(api.context.username, skypeTypePrefix);

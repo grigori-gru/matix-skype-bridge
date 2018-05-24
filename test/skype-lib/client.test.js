@@ -6,7 +6,15 @@ const {expect} = chai;
 chai.use(sinonChai);
 const proxyquire = require('proxyquire');
 // const config = require('../../src/config.js');
-const {getMatrixUser, toMatrixFormat, getNameFromId, getAvatarUrl, getTextContent, getBody, getMatrixRoomId} = require('../../src/utils');
+const {
+    getMatrixUser,
+    toMatrixFormat,
+    getNameFromId,
+    getAvatarUrl,
+    getTextContent,
+    getBody,
+    getMatrixRoomId,
+} = require('../../src/utils');
 // const fs = require('fs');
 const writeFileStub = stub();
 const {skypeify} = require('../../src/lib/skype-lib/skypeify');
@@ -157,6 +165,8 @@ describe('Client testing', () => {
             const expected = {
                 senderName: id,
                 senderId: toMatrixFormat(id),
+                // eslint-disable-next-line
+                avatarUrl: undefined,
             };
             expect(data).to.be.deep.equal(expected);
         });
