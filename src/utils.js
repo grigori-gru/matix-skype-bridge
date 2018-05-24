@@ -8,9 +8,22 @@ const {AllHtmlEntities: Entities} = require('html-entities');
 const entities = new Entities();
 
 const log = require('./modules/log')(module);
-const {textMatrixType, skypeTypePrefix, servicePrefix, bridge, puppet, SKYPE_USERS_TO_IGNORE, URL_BASE, deduplicationTag, deduplicationTagRegex, skypePrefix, matrixUserTag, delim, matrixRoomTag} = require('./config.js');
-const {domain} = bridge;
 const {deskypeify} = require('./lib/skype-lib/skypeify');
+const {
+    textMatrixType,
+    skypeTypePrefix,
+    servicePrefix,
+    bridge: {domain},
+    puppet,
+    SKYPE_USERS_TO_IGNORE,
+    URL_BASE,
+    deduplicationTag,
+    deduplicationTagRegex,
+    skypePrefix,
+    matrixUserTag,
+    delim,
+    matrixRoomTag,
+} = require('./config.js');
 
 // // check if tag is right before file extension
 // const FILENAME_TAG_PATTERN = /^.+_mx_\..+$/;
@@ -81,7 +94,11 @@ const utils = {
     // Create or transform matrix/skype names, id, alias to form for each other
 
     // This one should be made over
-    getAvatarUrl: id => `https://avatars.skype.com/v1/avatars/${entities.encode(utils.getNameFromId(id))}/public?returnDefaultImage=false&cacheHeaders=true`,
+    getAvatarUrl: id => {
+        if (utils.isSkypeId(id)) {
+            return `https://avatars.skype.com/v1/avatars/${entities.encode(utils.getNameFromId(id))}/public?returnDefaultImage=false&cacheHeaders=true`;
+        }
+    },
 
     getServiceName: (id, prefix = servicePrefix) => sum(prefix, id),
 
@@ -95,7 +112,7 @@ const utils = {
 
     getSkypeID: (name, prefix = skypePrefix) => sum(prefix, delim, name),
 
-    getNameFromId: id => id.substr(id.indexOf(delim) + 1),
+    getNameFromId: id => id.replace(getPrefix(skypePrefix, delim)),
 
     getMatrixRoomAlias: skypeConverstaion => utils.toMatrixFormat(skypeConverstaion),
 
