@@ -6,7 +6,7 @@ chai.use(sinonChai);
 const proxyquire = require('proxyquire');
 const {getMatrixUser, getRoomAlias, tagMatrixMessage, getTextContent, toMatrixFormat} = require('../../src/utils');
 const {Bridge, Intent} = require('matrix-appservice-bridge');
-// const log = require('../../src/modules/log')(module);
+const log = require('../../src/modules/log')(module);
 
 const {data: ghostEventData} = require('../fixtures/matrix/member-ghost.json');
 const {data: textEventData} = require('../fixtures/matrix/text.msg.json');
@@ -132,6 +132,7 @@ const state = {
 const logDebugStub = stub();
 const setRoomAliasStub = stub();
 const getRoomNameStub = stub();
+const logInfoStub = stub();
 
 const handlers = proxyquire('../../src/lib/matrix-handler/handlers', {
     '../../utils': {
@@ -139,10 +140,11 @@ const handlers = proxyquire('../../src/lib/matrix-handler/handlers', {
         setRoomAlias: setRoomAliasStub,
         getRoomName: getRoomNameStub,
     },
-    '../../modules/log': () => ({
+    '../../modules/log': module => ({
         debug: logDebugStub,
         warn: logWarnStub,
         error: logErrorStub,
+        info: logInfoStub,
     }),
 });
 // logDebugStub.callsFake(log.debug);
@@ -151,6 +153,12 @@ const {handleMatrixMessageEvent, handleMatrixMemberEvent} = handlers(state);
 
 describe('Integ matrix handler test', () => {
     const existRoom = 'existRoom';
+
+    beforeEach(() => {
+        logDebugStub.callsFake(log.debug);
+        logErrorStub.callsFake(log.error);
+        logInfoStub.callsFake(log.error);
+    });
 
     afterEach(() => {
         puppetStub.getRoomAliases.reset();

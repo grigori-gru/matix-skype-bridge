@@ -15,6 +15,8 @@ module.exports = ({puppet, bridge, skypeClient}) => {
 
     const getSkypeConversation = matrixRoomId => {
         const roomAliases = puppet.getRoomAliases(matrixRoomId);
+        log.debug('matrixRoomId %s has aliases: ', matrixRoomId, roomAliases);
+
         return getSkypeRoomFromAliases(roomAliases);
     };
 
@@ -65,6 +67,8 @@ module.exports = ({puppet, bridge, skypeClient}) => {
         handleMatrixMessageEvent: async ({sender, room_id: matrixRoomId, content: {body, msgtype}}) => {
             try {
                 const skypeConversation = getSkypeConversation(matrixRoomId);
+                log.info('Skype conversation for matrix room %s is %s', matrixRoomId, skypeConversation);
+
                 switch (msgtype) {
                     case textMatrixType: {
                         log.debug('text message from riot');

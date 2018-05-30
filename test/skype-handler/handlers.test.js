@@ -146,7 +146,7 @@ describe('Skype Handler testing', () => {
     });
 
     it('expect creating room if no room is', async () => {
-        const {body, roomId} = await getPayload(messageData);
+        const {body} = await getPayload(messageData);
 
         puppetStub.getRoom.resolves(null);
         bridgeIntentStub.getClient.returns({credentials: {userId: 'userId'}, sendMessage: sendMessageStub});
@@ -158,7 +158,6 @@ describe('Skype Handler testing', () => {
         expect(getBufferAndTypeStub).not.to.be.called;
         expect(bridgeIntentStub.join).to.be.calledWithExactly(matrixRoomId);
         expect(sendMessageStub).to.be.calledWithExactly(matrixRoomId, body);
-        expect(puppetStub.saveRoom).to.be.calledWithExactly(matrixRoomId, roomId);
         const {members} = skypeClientMock.getConversation(messageData.conversation);
         expect(puppetStub.invite).to.be.calledWithExactly(matrixRoomId, getMatrixUsers(members, ''));
     });

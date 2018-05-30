@@ -1,0 +1,20 @@
+{
+    "age": 115,
+    "content": {
+        "body": "DZR7KEvWkAASjza.jpg_large",
+        "info": {
+            "size": 133901
+        },
+        "msgtype": "m.file",
+        "url": "mxc: //matrixdev.bingo-boom.ru/vHiQjxQjPxdiGWdlxRDhXcpw"
+    },
+    "event_id": "$152767589533bfsme:matrixdev.bingo-boom.ru",
+    "origin_server_ts": 1527675895834,
+    "room_id": "!WTikdyewCmGaqmyVlg:matrixdev.bingo-boom.ru",
+    "sender": "@gv_grudinin:matrixdev.bingo-boom.ru",
+    "type": "m.room.message",
+    "unsigned": {
+        "age": 115
+    },
+    "user_id": "@gv_grudinin:matrixdev.bingo-boom.ru"
+}
