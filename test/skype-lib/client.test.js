@@ -1,3 +1,5 @@
+const fs = require('fs').promises;
+const {file} = require('tmp-promise');
 const log = require('../../src/modules/log')(module);
 const chai = require('chai');
 const {stub} = require('sinon');
@@ -15,8 +17,7 @@ const {
     getBody,
     getMatrixRoomId,
 } = require('../../src/utils');
-// const fs = require('fs');
-const writeFileStub = stub();
+
 const {skypeify} = require('../../src/lib/skype-lib/skypeify');
 const imageEvent = require('../fixtures/skype-image.json');
 const messageEvent = require('../fixtures/skype-message.json');
@@ -29,15 +30,14 @@ const getContactsStub = stub();
 const getRoomNameStub = stub();
 const createConversationStub = stub();
 const setConversationTopicStub = stub();
+const downloadDataByUrlStub = stub();
 
 const skypeLib = proxyquire('../../src/lib/skype-lib/client',
     {
-        'fs': {
-            writeFile: writeFileStub,
-        },
         '../../utils': {
             getDisplayName: getDisplayNameStub,
             getRoomName: getRoomNameStub,
+            downloadDataByUrl: downloadDataByUrlStub,
         },
     });
 
@@ -84,13 +84,14 @@ getContactsStub.resolves(skypeApiMock.contacts);
 
 const {
     createConversation,
-    sendTextToSkype,
-    // sendImageToSkype,
+    // sendDocToSkype,
     getPayload,
     getSkypeRoomData,
     testOnly: {
         getContact,
         getUserData,
+        saveDataByUrl,
+        sendTextToSkype,
     },
 } = skypeLib(skypeApiMock);
 
@@ -170,11 +171,6 @@ describe('Client testing', () => {
             };
             expect(data).to.be.deep.equal(expected);
         });
-        it('expect getUserData returns empty object if no sender we have', async () => {
-            const data = await getUserData(null);
-            const expected = {};
-            expect(data).to.be.deep.equal(expected);
-        });
     });
 
     describe('getPayload test', () => {
@@ -251,14 +247,14 @@ describe('Client testing', () => {
         });
     });
 
-    // it('expect sendImageToSkype to send image and not to have data in config.tmp dir', async () => {
+    // it('expect sendDocToSkype to send image and not to have data in config.tmp dir', async () => {
     //     const id = toMatrixFormat('8:live:abcd');
     //     const data = {
     //         text: 'text',
     //         url: 'http://testUrl',
     //     };
 
-    //     await sendImageToSkype(id, data);
+    //     await sendDocToSkype(id, data);
 
     //     const expectedMessage = {
     //         name: data.text,
@@ -299,6 +295,29 @@ describe('Client testing', () => {
                 expect(err).to.be;
                 expect(sendMessageStub).to.be.thrown;
             }
+        });
+    });
+
+    describe('Test saveDataByUrl', () => {
+        let data;
+        const testUrl = 'http://testUrl';
+        const dataToSave = 'Some data';
+
+        beforeEach(async () => {
+            data = await file();
+            downloadDataByUrlStub.returns(dataToSave);
+        });
+
+        afterEach(() => {
+            data.cleanup();
+        });
+
+        it('expect saveDataByUrl to save data', async () => {
+            await saveDataByUrl(testUrl, data.path);
+
+            const dataFromTmpFile = await fs.readFile(data.path, {encoding: 'utf-8', flag: 'r'});
+            expect(downloadDataByUrlStub).to.be.calledWithExactly(testUrl);
+            expect(dataFromTmpFile).to.be.equal(dataToSave);
         });
     });
 });

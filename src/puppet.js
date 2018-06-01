@@ -161,4 +161,13 @@ module.exports = class Puppet {
         }, null, 2));
         log.info(`Updated config file ${this.pathToConfig}`);
     }
+
+    /**
+     * Turn an MXC URL into an HTTP one
+     * @param {string} url MXC URL
+     * @returns {?string} url or null
+     */
+    getHttpUrl(url) {
+        return this.getClient().mxcUrlToHttp(url);
+    }
 };

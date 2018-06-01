@@ -1,6 +1,5 @@
 const log = require('../../modules/log')(module);
 const skypeApi = require('../skype-lib/client');
-const {textMatrixType} = require('../../config');
 const {getRoomName,
     tagMatrixMessage,
     getRoomAlias,
@@ -11,7 +10,7 @@ const {getRoomName,
 } = require('../../utils');
 
 module.exports = ({puppet, bridge, skypeClient}) => {
-    const {createConversation, sendTextToSkype} = skypeApi(skypeClient);
+    const {createConversation, handleMessage} = skypeApi(skypeClient);
 
     const getSkypeConversation = matrixRoomId => {
         const roomAliases = puppet.getRoomAliases(matrixRoomId);
@@ -52,6 +51,18 @@ module.exports = ({puppet, bridge, skypeClient}) => {
         return setRoomAlias(matrixRoomId, alias);
     };
 
+    const getMatrixPayload = async ({room_id: matrixRoomId, sender, content: {body, msgtype, url}}) => {
+        const displayName = await getDisplayName(sender);
+
+        return {
+            skypeConversation: getSkypeConversation(matrixRoomId),
+            body: tagMatrixMessage(body),
+            url: url ? puppet.getHttpUrl(url) : url,
+            displayName,
+            msgtype,
+        };
+    };
+
     return {
         handleMatrixMemberEvent: ({room_id: matrixRoomId, state_key: invitedUser}) => {
             try {
@@ -60,36 +71,16 @@ module.exports = ({puppet, bridge, skypeClient}) => {
 
                 return action(invitedUser, matrixRoomId);
             } catch (err) {
-                log.error(err);
+                log.error('handleMatrixMemberEvent', err);
             }
         },
 
-        handleMatrixMessageEvent: async ({sender, room_id: matrixRoomId, content: {body, msgtype}}) => {
+        handleMatrixMessageEvent: async data => {
             try {
-                const skypeConversation = getSkypeConversation(matrixRoomId);
-                log.info('Skype conversation for matrix room %s is %s', matrixRoomId, skypeConversation);
+                const payload = await getMatrixPayload(data);
+                log.info('message from riot with msgtype: ', payload.msgtype);
 
-                switch (msgtype) {
-                    case textMatrixType: {
-                        log.debug('text message from riot');
-                        const msg = tagMatrixMessage(body);
-                        const displayName = await getDisplayName(sender);
-
-                        return sendTextToSkype(skypeConversation, msg, displayName);
-                    }
-                    // case 'm.image': {
-                    //     log.debug('image message from riot');
-
-                    //     const url = puppet.getClient().mxcUrlToHttp(data.content.url);
-
-                    //     return sendImageToSkype(skypeConversation, {
-                    //         url,
-                    //         text: tagMatrixMessage(body),
-                    //     }, data);
-                    // }
-                    default:
-                        log.warn('dont know how to handle this msgtype', msgtype);
-                }
+                return handleMessage(payload);
             } catch (err) {
                 log.error('handleMatrixMessageEvent', err);
             }

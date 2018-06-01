@@ -77,7 +77,7 @@ const skypeClientMock = {
     ],
     getContacts: getContactsStub,
     getConversation: convId => skypeClientMock.conversations.find(({id}) => id === convId),
-    // sendMessage: sendMessageStub,
+    sendMessage: sendMessageStub,
 };
 
 const state = {
@@ -173,13 +173,14 @@ describe('Skype Handler testing', () => {
 
         expect(bridgeIntentStub.setAvatarUrl).to.be.calledWithExactly(contentUrl);
     });
-    // it('expect imageHandler returns with message event', () => {
+
+    // it('expect imageHandler returns with message event', async () => {
     //     await messageHandler(messageData);
     //     const {raw: sender} = messageData.from;
     //     const expectedMessage = await getPayload({...messageData, sender});
-    //     expect(sendSkypeMessageStub).to.be.calledWithExactly(expectedMessage);
+    //     expect(sendMessageStub).to.be.calledWithExactly(expectedMessage);
     //     expect(inviteSkypeConversationMembersStub).to.be.calledWithExactly(messageData.conversation);
-    //     sendSkypeMessageStub.resetHistory();
+    //     sendMessageStub.resetHistory();
     //     inviteSkypeConversationMembersStub.resetHistory();
     // });
 });

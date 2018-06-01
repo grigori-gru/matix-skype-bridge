@@ -1,9 +1,11 @@
 // const fs = require('fs');
-// const tmp = require('tmp');
+const fs = require('fs').promises;
+const {file} = require('tmp-promise');
 const log = require('../../modules/log')(module);
 const {deskypeify, skypeify} = require('./skypeify');
-const {skypeTypePrefix} = require('../../config');
+const {skypeTypePrefix, textMatrixType, fileMatrixType, imageMatrixType} = require('../../config');
 const {
+    downloadDataByUrl,
     getSkypeConverstionType,
     getSkypeMatrixUsers,
     getMatrixRoomId,
@@ -25,9 +27,6 @@ module.exports = api => {
     };
 
     const getUserData = async sender => {
-        if (!sender) {
-            return {};
-        }
         const contact = await getContact(sender);
 
         const senderName = contact ? contact.displayName : getNameFromId(sender);
@@ -48,8 +47,56 @@ module.exports = api => {
         return toMatrixFormat(skypeRoomId);
     };
 
+    const saveDataByUrl = async (url, path) => {
+        const data = await downloadDataByUrl(url);
+        await fs.writeFile(path, data);
+    };
+
+    const sendDocToSkype = async (converstionId, {text: name, url}) => {
+        // log.debug('Sending doc to skype', data);
+        const {path, cleanup} = await file();
+        try {
+            await saveDataByUrl(url, path);
+            await api.sendImage({file: path, name}, converstionId);
+
+            log.info('Doc by url %s is sent to skype converstion %s', url, converstionId);
+        } catch (err) {
+            log.error('Error in sending message to skype', err);
+        } finally {
+            cleanup();
+        }
+    };
+
+    const sendTextToSkype = async (conversationId, text, sender) => {
+        try {
+            const textContent = skypeify(getTextContent(sender, text));
+            await api.sendMessage({textContent}, conversationId);
+            log.info('Message %s from %s succesfully sent to conversation %s', text, sender, conversationId);
+        } catch (error) {
+            throw new Error(error);
+        }
+    };
+
+    const textHandler = ({skypeConversation, displayName, body}) =>
+        sendTextToSkype(skypeConversation, body, displayName);
+
+    const fileHandler = data =>
+        textHandler({...data, body: data.url});
+
+    const imageHandler = ({skypeConversation, body: text, url}) =>
+        sendDocToSkype(skypeConversation, {url, text});
+
+    const unknownTypeWarn = msgtype => () =>
+        log.warn('dont know how to handle this msgtype', msgtype);
+
+    const handlers = {
+        [textMatrixType]: textHandler,
+        [fileMatrixType]: fileHandler,
+        [imageMatrixType]: imageHandler,
+    };
+
     return {
-        // TODO: next time
+    // TODO: next time
         // downloadImage: url => getBufferAndType(url, {
         //     cookies: api.context.cookies,
         //     headers: {
@@ -70,49 +117,8 @@ module.exports = api => {
         },
 
 
-        sendTextToSkype: async (conversationId, text, sender) => {
-            try {
-                const textContent = skypeify(getTextContent(sender, text));
-                await api.sendMessage({textContent}, conversationId);
-                log.info('Message %s from %s succesfully sent to conversation %s', text, sender, conversationId);
-            } catch (error) {
-                throw new Error(error);
-            }
-        },
-
-        // TODO: try to change
-        // sendImageToSkype: (id, data) => {
-        //     let cleanup = () => {};
-        //     return new Promise((resolve, reject) => {
-        //         tmp.file((err, path, fd, cleanupCallback) => {
-        //             if (err) {
-        //                 reject(err);
-        //             }
-        //             cleanup = cleanupCallback;
-        //             const tmpFile = fs.createWriteStream(path);
-        //             getBufferAndType(data.url).then(({buffer, type}) => {
-        //                 tmpFile.write(buffer, err => {
-        //                     if (err) {
-        //                         reject(err);
-        //                         return;
-        //                     }
-        //                     tmpFile.close(() => {
-        //                         resolve(api.sendImage({
-        //                             file: path,
-        //                             name: data.text,
-        //                         }, toSkypeFormat(id)));
-        //                     });
-        //                 });
-        //             });
-        //         });
-        //     }).finally(() => {
-        //         cleanup();
-        //     });
-        // },
-
-
         getPayload: async ({content, conversation, from: {raw: sender}, html}) => {
-            const userData = await getUserData(sender);
+            const userData = sender ? await getUserData(sender) : {};
             const roomId = getMatrixRoomId(conversation);
             const body = getBody(content, userData.senderId, html);
 
@@ -132,9 +138,14 @@ module.exports = api => {
             }
         },
 
+        handleMessage: ({msgtype, ...data}) =>
+            (handlers[msgtype] || unknownTypeWarn(msgtype))(data),
+
         testOnly: {
             getContact,
             getUserData,
+            saveDataByUrl,
+            sendTextToSkype,
         },
     };
 };

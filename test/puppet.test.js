@@ -203,10 +203,5 @@ describe('Puppet testing', () => {
             const result = puppet.getMatrixRoomMembers(matrixRoomId);
             expect(result).to.be.deep.equal([]);
         });
-
-        // it('Expect "getMatrixRoomMembers" returns empty array if we have not started client yet or no members we have', () => {
-        //     const result = puppet.getMatrixRoomMembers(matrixRoomId);
-        //     expect(result).to.be.deep.equal([]);
-        // });
     });
 });
