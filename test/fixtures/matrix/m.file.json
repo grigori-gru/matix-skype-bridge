@@ -1,0 +1,23 @@
+{
+    "id": "hp8nvbrto0800",
+    "data": {
+        "age": 115,
+        "content": {
+            "body": "DZR7KEvWkAASjza.jpg_large",
+            "info": {
+                "size": 133901
+            },
+            "msgtype": "m.file",
+            "url": "mxc://test.domain/vHiQjxQjPxdiGWdlxRDhXcpw"
+        },
+        "event_id": "$152767589533bfsme:test.domain",
+        "origin_server_ts": 1527675895834,
+        "room_id": "!WTikdyewCmGaqmyVlg:test.domain",
+        "sender": "@skypebot:test.domain",
+        "type": "m.room.message",
+        "unsigned": {
+            "age": 115
+        },
+        "user_id": "@skypebot:test.domain"
+    }
+}

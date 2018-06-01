@@ -80,10 +80,10 @@ module.exports = state => {
             const botClient = botIntent.getClient();
             await botClient.deleteAlias(getRoomAlias(skypeRoomId));
             log.warn('deleted alias... trying again to get or create room.');
+
             // eslint-disable-next-line
             return getMatrixRoom(skypeRoomId);
         }
-        puppet.saveRoom(newRoomId, skypeRoomId);
 
         return newRoomId;
     };

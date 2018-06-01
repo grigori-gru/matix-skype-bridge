@@ -28,4 +28,6 @@ module.exports = {
     skypeTypePrefix,
     delim,
     textMatrixType: 'm.text',
+    fileMatrixType: 'm.file',
+    imageMatrixType: 'm.image',
 };

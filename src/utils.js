@@ -246,6 +246,12 @@ const getRoomName = roomId => {
         });
 };
 
+const downloadDataByUrl = async url => {
+    const {buffer} = await downloadGetBufferAndHeaders(url);
+
+    return buffer;
+};
+
 const getBufferAndType = (url, data) =>
     downloadGetBufferAndHeaders(url, data)
         .then(({buffer, headers}) => {
@@ -298,4 +304,5 @@ module.exports = {
     getNameToSkype,
     getRoomName,
     getBufferAndType,
+    downloadDataByUrl,
 };
