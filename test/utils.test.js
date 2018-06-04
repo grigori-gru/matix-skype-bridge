@@ -1,6 +1,6 @@
 const nock = require('nock');
 const {expect} = require('chai');
-const {servicePrefix, SKYPE_USERS_TO_IGNORE, matrixUserTag, delim, skypePrefix, puppet, URL_BASE, skypeTypePrefix} = require('../src/config.js');
+const {servicePrefix, SKYPE_USERS_TO_IGNORE, matrixUserTag, delim, skypePrefix, puppet, URL_BASE, skypeTypePrefix, fullImgPathParams} = require('../src/config.js');
 const {data: ghostEventData} = require('./fixtures/matrix/member-ghost.json');
 const {data: puppetEventData} = require('./fixtures/matrix/member-puppet.json');
 const {data: skypebotEventData} = require('./fixtures/matrix/member-skypebot.json');
@@ -27,6 +27,7 @@ const {
     getMatrixUsers,
     getNameToSkype,
     tagMatrixMessage,
+    getFullSizeImgUrl,
 } = require('../src/utils');
 
 
@@ -294,6 +295,16 @@ describe('Utils test', () => {
             const text = tagMatrixMessage('text');
             const result = isTaggedMatrixMessage(text);
             expect(result).to.be.true;
+        });
+    });
+
+    describe('Test getFullSizeImgUrl', () => {
+        const url = 'https://api.asm.skype.com/v1/objects/0mjfdklbnd';
+        it('Expect get correct url', () => {
+            const result = getFullSizeImgUrl(url);
+            const [p1, p2] = fullImgPathParams;
+            const expectedUrl = `${url}/${p1}/${p2}`;
+            expect(result).to.be.equal(expectedUrl);
         });
     });
 });

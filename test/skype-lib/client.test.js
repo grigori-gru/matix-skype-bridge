@@ -11,7 +11,7 @@ const proxyquire = require('proxyquire');
 const {
     getMatrixUser,
     toMatrixFormat,
-    getNameFromId,
+    getNameFromSkypeId,
     getAvatarUrl,
     getTextContent,
     getBody,
@@ -154,7 +154,7 @@ describe('Client testing', () => {
             const id = '8:live:testUser';
             const data = await getUserData(id);
             const expected = {
-                senderName: getNameFromId(id),
+                senderName: getNameFromSkypeId(id),
                 avatarUrl: getAvatarUrl(id),
                 senderId: toMatrixFormat(id),
             };
@@ -193,7 +193,7 @@ describe('Client testing', () => {
             const expected = {
                 roomId: getMatrixRoomId(data.conversation),
                 userData,
-                body: getBody(data.content, userData.senderId, data.html),
+                body: getBody(data.original_file_name, userData.senderId, data.html),
             };
             log.debug(result);
             expect(result).to.be.deep.equal(expected);
