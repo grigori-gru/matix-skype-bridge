@@ -85,5 +85,6 @@ module.exports = ({puppet, bridge, skypeClient}) => {
                 log.error('handleMatrixMessageEvent', err);
             }
         },
+        testOnly: {getMatrixPayload},
     };
 };

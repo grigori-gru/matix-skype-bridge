@@ -13,7 +13,7 @@ const {
     toMatrixFormat,
     toSkypeFormat,
     getAvatarUrl,
-    getNameFromId,
+    getNameFromSkypeId,
     getTextContent,
     getSkypeID,
 } = require('../../utils');
@@ -29,7 +29,7 @@ module.exports = api => {
     const getUserData = async sender => {
         const contact = await getContact(sender);
 
-        const senderName = contact ? contact.displayName : getNameFromId(sender);
+        const senderName = contact ? contact.displayName : getNameFromSkypeId(sender);
         const avatarUrl = contact ? contact.profile.avatarUrl : getAvatarUrl(sender);
         const senderId = toMatrixFormat(sender);
 
@@ -96,13 +96,12 @@ module.exports = api => {
     };
 
     return {
-    // TODO: next time
-        // downloadImage: url => getBufferAndType(url, {
-        //     cookies: api.context.cookies,
-        //     headers: {
-        //         Authorization: `skype_token ${api.context.skypeToken.value}`,
-        //     },
-        // }),
+        getSkypeReqOptions: () => ({
+            cookies: api.context.cookies,
+            headers: {
+                Authorization: `skype_token ${api.context.skypeToken.value}`,
+            },
+        }),
 
         createConversation: async (usersCollection, roomName) => {
             const users = Object.keys(usersCollection);
@@ -117,10 +116,10 @@ module.exports = api => {
         },
 
 
-        getPayload: async ({content, conversation, from: {raw: sender}, html}) => {
+        getPayload: async ({content, conversation, from: {raw: sender}, original_file_name: fileName}) => {
             const userData = sender ? await getUserData(sender) : {};
             const roomId = getMatrixRoomId(conversation);
-            const body = getBody(content, userData.senderId, html);
+            const body = getBody(content || fileName, userData.senderId);
 
             return {body, userData, roomId};
         },
@@ -138,8 +137,11 @@ module.exports = api => {
             }
         },
 
-        handleMessage: ({msgtype, ...data}) =>
-            (handlers[msgtype] || unknownTypeWarn(msgtype))(data),
+        handleMessage: ({msgtype, ...payload}) => {
+            const action = handlers[msgtype] || unknownTypeWarn(msgtype);
+
+            return action(payload);
+        },
 
         testOnly: {
             getContact,
