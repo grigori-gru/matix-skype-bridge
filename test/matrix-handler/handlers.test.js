@@ -259,7 +259,7 @@ describe('Matrix handler integ testing', () => {
             logErrorStub.reset();
         });
 
-        it.only('Expect file from matrix to be send to skype', async () => {
+        it('Expect file from matrix to be send to skype', async () => {
             const data = await getMatrixPayload(fileEventData);
             log.debug(data);
             const {skypeConversation, displayName, url} = data;
