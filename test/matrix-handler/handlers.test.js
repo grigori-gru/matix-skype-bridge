@@ -160,7 +160,7 @@ const handlers = proxyquire('../../src/lib/matrix-handler/handlers', {
 });
 // logDebugStub.callsFake(log.debug);
 
-const {handleMatrixMessageEvent, handleMatrixMemberEvent} = handlers(state);
+const {handleMatrixMessageEvent, handleMatrixMemberEvent, testOnly: {getMatrixPayload}} = handlers(state);
 const skypeRoomName = 'skypeRoomName';
 
 describe('Matrix handler integ testing', () => {
@@ -259,9 +259,12 @@ describe('Matrix handler integ testing', () => {
             logErrorStub.reset();
         });
 
-        it('Expect file from matrix to be send to skype', async () => {
+        it.only('Expect file from matrix to be send to skype', async () => {
+            const data = await getMatrixPayload(fileEventData);
+            log.debug(data);
+            const {skypeConversation, displayName, url} = data;
             await handleMatrixMessageEvent(fileEventData);
-            expect(sendImageStub).not.to.be.called;
+            expect(sendImageStub).not.to.be.calledWithExactly({skypeConversation, body: url, displayName});
             expect(sendMessageStub).to.be.called;
         });
 

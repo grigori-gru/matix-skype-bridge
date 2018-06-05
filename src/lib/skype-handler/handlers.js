@@ -1,6 +1,4 @@
 const path = require('path');
-// const fs = require('fs');
-
 const log = require('../../modules/log')(module);
 const skypeLib = require('../skype-lib/client');
 const {
@@ -16,54 +14,68 @@ const {
     // getImgLinkBody,
 } = require('../../utils');
 
+const setGhostAvatar = async (ghostIntent, avatarUrl) => {
+    const client = ghostIntent.getClient();
+    log.debug('downloading avatar from public web', avatarUrl);
+    const {buffer, type} = await getBufferAndType(avatarUrl);
+    const opts = {
+        name: path.basename(avatarUrl),
+        type,
+        rawResponse: false,
+    };
+
+    const {content_uri: contentUri} = await client.uploadContent(buffer, opts);
+    log.debug('uploaded avatar and got back content uri', contentUri);
+
+    return ghostIntent.setAvatarUrl(contentUri);
+};
+
+const updateIntentProfile = async (ghostIntent, {senderId, senderName, avatarUrl}) => {
+    const client = ghostIntent.getClient();
+
+    const {avatar_url: currentAvatarUrl, displayName} = await ghostIntent.getProfileInfo(client.credentials.userId);
+    const promiseList = [];
+
+    if (!displayName && senderName) {
+        promiseList.push(ghostIntent.setDisplayName(senderName));
+    }
+    if (!currentAvatarUrl && avatarUrl) {
+        promiseList.push(setGhostAvatar(ghostIntent, avatarUrl));
+    }
+
+    return Promise.all(promiseList);
+};
+
+const getContent = async (client, {buffer, type}, name) => {
+    try {
+        const uploadContentInfo = await client.uploadContent(buffer, {name, type, rawResponse: false});
+        log.debug('uploadContentInfo for skype image %s is ', name, uploadContentInfo);
+
+        return uploadContentInfo.content_uri || uploadContentInfo;
+    } catch (err) {
+        log.error('uploadContent error', err);
+    }
+};
+
 module.exports = state => {
     const {puppet, skypeClient, bridge} = state;
     const {getSkypeRoomData, getPayload, getSkypeReqOptions} = skypeLib(skypeClient);
 
-    const setGhostAvatar = async (ghostIntent, avatarUrl) => {
-        const client = ghostIntent.getClient();
-        log.debug('downloading avatar from public web', avatarUrl);
-        const {buffer, type} = await getBufferAndType(avatarUrl);
-        const opts = {
-            name: path.basename(avatarUrl),
-            type,
-            rawResponse: false,
-        };
-        log.debug(client);
-        const {content_uri: contentUri} = await client.uploadContent(buffer, opts);
-        log.debug('uploaded avatar and got back content uri', contentUri);
+    const getUserClient = async (roomId, userData) => {
+        const {senderId, senderName} = userData;
+        log.debug('get user client for skype user %s (%s)', senderId, senderName);
+        try {
+            const ghostIntent = bridge.getIntent(getMatrixUser(senderId));
 
-        return ghostIntent.setAvatarUrl(contentUri);
-    };
+            await updateIntentProfile(ghostIntent, userData);
+            await ghostIntent.join(roomId);
 
-    const getIntentFomSkypeSender = async (roomId, userId, name, avatarUrl) => {
-        log.debug('this message was not sent by me');
-        const ghostIntent = bridge.getIntent(getMatrixUser(userId));
-        const client = ghostIntent.getClient();
+            return ghostIntent.getClient();
+        } catch (err) {
+            log.warn('Can\'t get Intent for user %s. Error: ', toSkypeFormat(senderId), err);
 
-        const {avatar_url: currentAvatarUrl, displayName} = await ghostIntent.getProfileInfo(client.credentials.userId);
-        const promiseList = [];
-
-        if (!displayName && name) {
-            promiseList.push(ghostIntent.setDisplayName(name));
+            return puppet.getClient();
         }
-        if (!currentAvatarUrl && avatarUrl) {
-            promiseList.push(setGhostAvatar(ghostIntent, avatarUrl));
-        }
-
-        await Promise.all(promiseList);
-        await ghostIntent.join(roomId);
-
-        return ghostIntent.getClient();
-    };
-
-    const getUserClient = (roomId, userData, doNotTryToGetRemoteUserStoreData) => {
-        const {senderId, senderName, avatarUrl} = userData;
-        log.debug('get user client for skype user %s (%s)', toSkypeFormat(senderId), senderName);
-
-        return senderId ?
-            getIntentFomSkypeSender(roomId, senderId, senderName, avatarUrl) :
-            puppet.getClient();
     };
 
     const createRoom = async skypeRoomId => {
@@ -103,39 +115,23 @@ module.exports = state => {
     const downloadImage = url => {
         const fullSizeUrl = getFullSizeImgUrl(url);
         const reqOptions = getSkypeReqOptions();
+
         return getBufferAndType(fullSizeUrl, reqOptions);
     };
 
-    const getContent = async (client, {buffer, type}, name) => {
-        const uploadContentInfo = await client.uploadContent(buffer, {name, type, rawResponse: false});
-        log.debug('uploadContentInfo for skype image %s is ', name, uploadContentInfo);
-
-        return uploadContentInfo.content_uri || uploadContentInfo;
-    };
-
-    const handleSkypeImage = async ({userData, body: {body}}, matrixRoomId, url) => {
+    const sendImageMessage = async ({userData, body: {body}}, matrixRoomId, url) => {
         const client = await getUserClient(matrixRoomId, userData);
+        const imgData = await downloadImage(url);
+        log.debug('Image data for %s received', url);
 
-        try {
-            const imgData = await downloadImage(url);
-            log.debug('Image data received');
-            const imageOpts = getImageOpts(imgData);
-            const content = await getContent(client, imgData, body);
-
-            return client.sendImageMessage(matrixRoomId, content, imageOpts, body);
-        } catch (err) {
-            log.warn('upload error', err);
-            const errBody = getBody(url, userData.senderId);
-
-            return client.sendMessage(matrixRoomId, errBody);
-        }
+        const imageOpts = getImageOpts(imgData);
+        const content = await getContent(client, imgData, body);
+        return content ?
+            client.sendImageMessage(matrixRoomId, content, imageOpts, body) :
+            client.sendMessage(matrixRoomId, getBody(url, userData.senderId));
     };
 
-    const sendMessage = async ({body, userData, roomId}, matrixRoomId) => {
-        log.debug('sending message with body', body);
-        log.debug('from skype to Matrix room', roomId);
-        log.debug('as Matrix intent', userData);
-
+    const sendTextMessage = async ({body, userData}, matrixRoomId) => {
         const client = await getUserClient(matrixRoomId, userData);
         return client.sendMessage(matrixRoomId, body);
     };
@@ -154,34 +150,34 @@ module.exports = state => {
         }
     };
 
-    return {
-        messageHandler: async data => {
-            try {
-                const payload = await getPayload(data);
-                const matrixRoomId = await getMatrixRoom(payload.roomId);
-                await sendMessage(payload, matrixRoomId);
-
-                return inviteSkypeConversationMembers(data.conversation, matrixRoomId);
-            } catch (err) {
-                log.error('messageHandler error', err);
-            }
-        },
-
-        imageHandler: async data => {
+    const handleData = async (data, func) => {
+        try {
             const payload = await getPayload(data);
+            const {body, userData, roomId} = payload;
+            const matrixRoomId = await getMatrixRoom(roomId);
 
-            try {
-                const matrixRoomId = await getMatrixRoom(payload.roomId);
-                return handleSkypeImage(payload, matrixRoomId, data.uri);
-            } catch (err) {
-                log.error('imageHandler Error', err);
-                // const body = getImgLinkBody(fileName, uri, payload.userData.senderId);
+            log.debug('sending message with body', body);
+            log.debug('from skype to Matrix room', roomId);
+            log.debug('as Matrix intent', userData);
 
-                // return sendMessage(matrixRoomId, body);
-            }
-        },
+            await func(payload, matrixRoomId, data.uri);
+
+            return inviteSkypeConversationMembers(data.conversation, matrixRoomId);
+        } catch (error) {
+            log.error('Error in %s', func.name, error);
+        }
+    };
+
+    return {
+        messageHandler: data => handleData(data, sendTextMessage),
+
+        imageHandler: data => handleData(data, sendImageMessage),
+
+        // TODO maybe try to send if error received
+        // const body = getImgLinkBody(fileName, uri, payload.userData.senderId);
+        // return sendMessage(matrixRoomId, body);
         testOnly: {
-            getIntentFomSkypeSender,
+            getUserClient,
         },
     };
 };

@@ -10,7 +10,7 @@ const {resource: messageData} = require('../fixtures/skype-message.json');
 const clientLib = require('../../src/lib/skype-lib/client');
 const Puppet = require('../../src/puppet');
 const {Bridge, Intent} = require('matrix-appservice-bridge');
-const {getMatrixUsers, getRoomAlias, getImageOpts} = require('../../src/utils');
+const {getMatrixUsers, getImageOpts, getBody} = require('../../src/utils');
 const log = require('../../src/modules/log')(module);
 
 const puppetStub = createStubInstance(Puppet);
@@ -20,6 +20,7 @@ const sendMessageStub = stub();
 const sendImageMessageStub = stub();
 const uploadContentStub = stub();
 const getBufferAndTypeStub = stub();
+const deleteAliasStub = stub();
 
 // const handleSkypeImageStub = stub();
 const getContactsStub = stub();
@@ -118,113 +119,176 @@ const handlers = proxyquire('../../src/lib/skype-handler/handlers', {
         warn: log.warn,
     }),
 });
-const {messageHandler, imageHandler, testOnly: {getIntentFomSkypeSender}} = handlers(state);
+const {messageHandler, imageHandler, testOnly: {getUserClient}} = handlers(state);
 
 describe('Skype Handler testing', () => {
+    const contentUrl = 'result';
     beforeEach(() => {
-        bridgeStub.getIntent.returns(bridgeIntentStub);
-
-        bridgeIntentStub.setDisplayName.reset();
-        bridgeIntentStub.join.reset();
-        sendMessageStub.reset();
-        puppetStub.getRoom.reset();
-        logErrorStub.reset();
-    });
-
-    it('expect messageHandler returns with message event', async () => {
-        const {body, roomId} = await getPayload(messageData);
-        const roomAlias = getRoomAlias(roomId);
-
-        puppetStub.getRoom.withArgs(roomAlias).returns(matrixRoomId);
-        bridgeStub.getIntent.returns(bridgeIntentStub);
-        bridgeIntentStub.getClient.returns({credentials: {userId: 'userId'}, sendMessage: sendMessageStub});
-        bridgeIntentStub.getProfileInfo.withArgs('userId').returns({'avatar_url': 'currentAvatarUrl', 'displayName': 'displayName'});
-        await messageHandler(messageData);
-
-        expect(bridgeIntentStub.setDisplayName).not.to.be.called;
-        expect(getBufferAndTypeStub).not.to.be.called;
-        expect(bridgeIntentStub.join).to.be.calledWithExactly(matrixRoomId);
-        expect(sendMessageStub).to.be.calledWithExactly(matrixRoomId, body);
-
-        const {members} = skypeClientMock.getConversation(messageData.conversation);
-        expect(puppetStub.invite).to.be.calledWithExactly(matrixRoomId, getMatrixUsers(members, ''));
-    });
-
-    it('expect messageHandler to have throw error inside and not to return anything or to be thrown', async () => {
-        puppetStub.getRoom.throws();
-        const result = await messageHandler(messageData);
-        expect(result).not.to.be;
-
-        expect(bridgeIntentStub.setDisplayName).not.to.be.called;
-        expect(bridgeIntentStub.join).not.to.be.called;
-        expect(sendMessageStub).not.to.be.called;
-        expect(logErrorStub).to.be.calledWith('messageHandler error');
-    });
-
-    it('expect creating room if no room is', async () => {
-        const {body} = await getPayload(messageData);
-
-        puppetStub.getRoom.resolves(null);
-        bridgeIntentStub.getClient.returns({credentials: {userId: 'userId'}, sendMessage: sendMessageStub});
-        bridgeIntentStub.getProfileInfo.withArgs('userId').returns({'avatar_url': 'currentAvatarUrl', 'displayName': 'displayName'});
-        bridgeIntentStub.createRoom.returns({'room_id': matrixRoomId});
-        await messageHandler(messageData);
-
-        expect(bridgeIntentStub.setDisplayName).not.to.be.called;
-        expect(getBufferAndTypeStub).not.to.be.called;
-        expect(bridgeIntentStub.join).to.be.calledWithExactly(matrixRoomId);
-        expect(sendMessageStub).to.be.calledWithExactly(matrixRoomId, body);
-        const {members} = skypeClientMock.getConversation(messageData.conversation);
-        expect(puppetStub.invite).to.be.calledWithExactly(matrixRoomId, getMatrixUsers(members, ''));
-    });
-
-    it('expect getIntentFromSkype to create new name and avatar', async () => {
-        const contentUrl = 'result';
-        const client = {credentials: {userId: 'fake'}, uploadContent: () => ({'content_uri': contentUrl})};
-        bridgeIntentStub.getClient.returns(client);
-        bridgeIntentStub.getProfileInfo.withArgs('fake').returns({});
-        bridgeIntentStub.setDisplayName.resolves();
         getBufferAndTypeStub.resolves(downloadImgData);
-        await getIntentFomSkypeSender(matrixRoomId, 'userId', 'name', 'htttp://avatarUrl');
-
-        expect(bridgeIntentStub.setAvatarUrl).to.be.calledWithExactly(contentUrl);
-    });
-
-
-    it('expect imageHandler returns with message event', async () => {
-        const {body} = await getPayload(imageData);
-        const {'original_file_name': fileName} = imageData;
+        bridgeStub.getIntent.returns(bridgeIntentStub);
+        bridgeIntentStub.getProfileInfo.withArgs('fake').returns({});
+        bridgeIntentStub.getProfileInfo.withArgs('userId').returns({'avatar_url': 'currentAvatarUrl', 'displayName': 'displayName'});
+        puppetStub.getRoom.resolves(matrixRoomId);
+        bridgeStub.getIntent.returns(bridgeIntentStub);
         bridgeIntentStub.getClient.returns({
             credentials: {userId: 'userId'},
             sendImageMessage: sendImageMessageStub,
             uploadContent: uploadContentStub,
             sendMessage: sendMessageStub,
+            deleteAlias: deleteAliasStub,
         });
-        const opts = getImageOpts(downloadImgData);
-        getBufferAndTypeStub.resolves(downloadImgData);
-        uploadContentStub.resolves(matrixLink);
         bridgeIntentStub.getProfileInfo.withArgs('userId').returns({'avatar_url': 'currentAvatarUrl', 'displayName': 'displayName'});
-        puppetStub.getRoom.returns(matrixRoomId);
+    });
+    describe('Message testing', () => {
+        afterEach(() => {
+            bridgeIntentStub.join.reset();
+            sendMessageStub.reset();
+            puppetStub.getRoom.reset();
+            puppetStub.joinRoom.reset();
+            logErrorStub.reset();
+        });
+        it('expect messageHandler returns with message event', async () => {
+            const {body} = await getPayload(messageData);
+            await messageHandler(messageData);
 
-        await imageHandler(imageData);
+            expect(bridgeIntentStub.setDisplayName).not.to.be.called;
+            expect(getBufferAndTypeStub).not.to.be.called;
+            expect(bridgeIntentStub.join).to.be.calledWithExactly(matrixRoomId);
+            expect(sendMessageStub).to.be.calledWithExactly(matrixRoomId, body);
 
-        expect(sendMessageStub).not.to.be.called;
-        expect(logErrorStub).not.to.be.called;
-        expect(getBufferAndTypeStub).to.be.called;
-        expect(uploadContentStub).to.be.calledWithExactly(buffer, {name: fileName, type, rawResponse: false});
-        expect(sendImageMessageStub).to.be.calledWithExactly(matrixRoomId, matrixLink, opts, body.body);
+            const {members} = skypeClientMock.getConversation(messageData.conversation);
+            expect(puppetStub.invite).to.be.calledWithExactly(matrixRoomId, getMatrixUsers(members, ''));
+        });
+
+        it('expect messageHandler returns with message event and not falls if inviteSkypeConversationMembers throws', async () => {
+            const {body} = await getPayload(messageData);
+            puppetStub.invite.throws();
+            await messageHandler(messageData);
+
+            expect(bridgeIntentStub.setDisplayName).not.to.be.called;
+            expect(getBufferAndTypeStub).not.to.be.called;
+            expect(bridgeIntentStub.join).to.be.calledWithExactly(matrixRoomId);
+            expect(sendMessageStub).to.be.calledWithExactly(matrixRoomId, body);
+            expect(logErrorStub).to.be.calledWith('inviteSkypeConversationMembers error');
+            expect(logErrorStub).not.to.be.calledWith('Error in %s', 'sendTextMessage');
+            puppetStub.invite.reset();
+        });
+
+        it('expect messageHandler to have throw error inside and not to return anything or to be thrown', async () => {
+            puppetStub.getRoom.throws();
+            const result = await messageHandler(messageData);
+
+            expect(result).not.to.be;
+            expect(bridgeIntentStub.setDisplayName).not.to.be.called;
+            expect(bridgeIntentStub.join).not.to.be.called;
+            expect(sendMessageStub).not.to.be.called;
+            expect(logErrorStub).to.be.calledWith('Error in %s', 'sendTextMessage');
+        });
+
+        it('expect creating room if no room is', async () => {
+            const {body} = await getPayload(messageData);
+            puppetStub.getRoom.resolves(null);
+            bridgeIntentStub.createRoom.returns({'room_id': matrixRoomId});
+            await messageHandler(messageData);
+
+            expect(bridgeIntentStub.setDisplayName).not.to.be.called;
+            expect(getBufferAndTypeStub).not.to.be.called;
+            expect(bridgeIntentStub.join).to.be.calledWithExactly(matrixRoomId);
+            expect(sendMessageStub).to.be.calledWithExactly(matrixRoomId, body);
+            const {members} = skypeClientMock.getConversation(messageData.conversation);
+            expect(puppetStub.invite).to.be.calledWithExactly(matrixRoomId, getMatrixUsers(members, ''));
+            bridgeIntentStub.setDisplayName.reset();
+        });
+
+        it('expect "No known servers" to be in room creating and new room should be created', async () => {
+            puppetStub.getRoom.resolves(null);
+            bridgeIntentStub.createRoom.returns({'room_id': matrixRoomId});
+            const {body} = await getPayload(messageData);
+            puppetStub.joinRoom.onFirstCall().returns(true);
+            await messageHandler(messageData);
+
+            expect(getBufferAndTypeStub).not.to.be.called;
+            expect(bridgeIntentStub.join).to.be.calledWithExactly(matrixRoomId);
+            expect(sendMessageStub).to.be.calledWithExactly(matrixRoomId, body);
+            expect(deleteAliasStub).to.be.called;
+            expect(logErrorStub).not.to.be.calledWith('Error in %s', 'sendTextMessage');
+            puppetStub.invite.reset();
+        });
     });
 
-    it('expect imageHandler returns with message event', async () => {
-        // const {userData} = await getPayload(imageData);
-        // const {'original_file_name': fileName, uri} = imageData;
-        puppetStub.getRoom.throws();
-        await imageHandler(imageData);
+    describe('getUserClient testing', () => {
+        afterEach(() => {
+            bridgeIntentStub.join.reset();
+        });
+        const userData = {senderId: 'userId', senderName: 'name', avatarUrl: 'htttp://avatarUrl'};
 
-        expect(logErrorStub).to.be.called;
-        // expect(sendMessageStub).to.be.calledWithExactly(
-        //     matrixRoomId,
-        //     getImgLinkBody(fileName, uri, userData.senderId),
-        // );
+        it('Expect getUserClient returns puppet client if intent from bridge will be fallen', async () => {
+            bridgeIntentStub.join.throws();
+            await getUserClient(matrixRoomId, userData);
+            expect(puppetStub.getClient).to.be.called;
+        });
+
+        it('expect getIntentFromSkype to create new name and avatar', async () => {
+            uploadContentStub.returns({'content_uri': contentUrl});
+            bridgeIntentStub.getClient.returns({
+                credentials: {userId: 'fake'},
+                uploadContent: uploadContentStub,
+            });
+            bridgeIntentStub.setDisplayName.resolves();
+            getBufferAndTypeStub.resolves(downloadImgData);
+            await getUserClient(matrixRoomId, userData);
+
+            expect(bridgeIntentStub.setAvatarUrl).to.be.calledWithExactly(contentUrl);
+        });
+    });
+
+    describe('Image testing', () => {
+        afterEach(() => {
+            sendImageMessageStub.reset();
+        });
+        it('expect imageHandler returns with message event', async () => {
+            const {body} = await getPayload(imageData);
+            const {'original_file_name': fileName} = imageData;
+            const opts = getImageOpts(downloadImgData);
+            uploadContentStub.resolves(matrixLink);
+            bridgeIntentStub.getProfileInfo.withArgs('userId').returns({'avatar_url': 'currentAvatarUrl', 'displayName': 'displayName'});
+            puppetStub.getRoom.returns(matrixRoomId);
+
+            await imageHandler(imageData);
+
+            expect(sendMessageStub).not.to.be.called;
+            expect(logErrorStub).not.to.be.called;
+            expect(getBufferAndTypeStub).to.be.called;
+            expect(uploadContentStub).to.be.calledWithExactly(buffer, {name: fileName, type, rawResponse: false});
+            expect(sendImageMessageStub).to.be.calledWithExactly(matrixRoomId, matrixLink, opts, body.body);
+        });
+
+        it('expect imageHandler returns text message if upload content will be unsuccessful', async () => {
+            const {userData} = await getPayload(imageData);
+            const {uri} = imageData;
+            uploadContentStub.throws();
+            bridgeIntentStub.getProfileInfo.withArgs('userId').returns({'avatar_url': 'currentAvatarUrl', 'displayName': 'displayName'});
+            puppetStub.getRoom.returns(matrixRoomId);
+
+            await imageHandler(imageData);
+
+            expect(logErrorStub).to.be.calledWith('uploadContent error');
+            expect(getBufferAndTypeStub).to.be.called;
+            expect(sendImageMessageStub).not.to.be.called;
+            expect(sendMessageStub).to.be.calledWithExactly(matrixRoomId, getBody(uri, userData.senderId));
+        });
+
+        it('expect imageHandler returns with message event', async () => {
+            // const {userData} = await getPayload(imageData);
+            // const {'original_file_name': fileName, uri} = imageData;
+            puppetStub.getRoom.throws();
+            await imageHandler(imageData);
+
+            expect(logErrorStub).to.be.called;
+            // expect(sendMessageStub).to.be.calledWithExactly(
+            //     matrixRoomId,
+            //     getImgLinkBody(fileName, uri, userData.senderId),
+            // );
+        });
     });
 });
