@@ -5,7 +5,7 @@ const log = require('../../modules/log')(module);
 const {deskypeify, skypeify} = require('./skypeify');
 const {skypeTypePrefix, textMatrixType, fileMatrixType, imageMatrixType} = require('../../config');
 const {
-    downloadDataByUrl,
+    getBufferByUrl,
     getSkypeConverstionType,
     getSkypeMatrixUsers,
     getMatrixRoomId,
@@ -48,8 +48,8 @@ module.exports = api => {
     };
 
     const saveDataByUrl = async (url, path) => {
-        const data = await downloadDataByUrl(url);
-        await fs.writeFile(path, data);
+        const buffer = await getBufferByUrl(url);
+        await fs.writeFile(path, buffer);
     };
 
     const sendDocToSkype = async (converstionId, {text: name, url}) => {
@@ -97,7 +97,7 @@ module.exports = api => {
 
     return {
         getSkypeReqOptions: () => ({
-            cookies: api.context.cookies,
+            // cookies: api.context.cookies,
             headers: {
                 Authorization: `skype_token ${api.context.skypeToken.value}`,
             },

@@ -147,7 +147,7 @@ const handlers = proxyquire('../../src/lib/matrix-handler/handlers', {
         'getDisplayName': getDisplayNameStub,
         'setRoomAlias': setRoomAliasStub,
         'getRoomName': getRoomNameStub,
-        'downloadDataByUrl': downloadDataByUrlStub,
+        'getBufferByUrl': downloadDataByUrlStub,
         '@global': true,
     },
     '../../modules/log': module => ({

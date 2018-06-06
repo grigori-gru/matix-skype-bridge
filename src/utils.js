@@ -1,5 +1,3 @@
-const concatStream = require('concat-stream');
-const needle = require('needle');
 const mime = require('mime-types');
 const {parse: urlParse} = require('url');
 const fetch = require('node-fetch');
@@ -25,13 +23,6 @@ const {
     matrixRoomTag,
     fullImgPathParams,
 } = require('./config.js');
-
-// // check if tag is right before file extension
-// const FILENAME_TAG_PATTERN = /^.+_mx_\..+$/;
-
-// const isFilenameTagged = filepath => !!filepath.match(FILENAME_TAG_PATTERN);
-
-// tag the message to know it was sent by the bridge
 
 const autoTagger = (sender, func) => text =>
     (sender ? text : func(text));
@@ -88,10 +79,6 @@ const getRoomAlias = (id, prefix = servicePrefix) =>
     sum(matrixRoomTag, getNameDomain(getServiceName(id, prefix)));
 
 const getSkypeID = (name, prefix = skypePrefix) => sum(prefix, delim, name);
-
-// const getNameFromId = id => id.replace(getPrefix(skypePrefix, delim), '');
-
-// const getMatrixRoomAlias = skypeConverstaion => toMatrixFormat(skypeConverstaion);
 
 const getNameFromSkypeId = name => {
     const prefix = name.includes(skypePrefix) ? skypePrefix : skypeTypePrefix;
@@ -231,44 +218,20 @@ const getRoomName = roomId => {
         });
 };
 
-const downloadGetBufferAndHeaders = (url, data) =>
-    new Promise((resolve, reject) => {
-        let headers = {
-            'content-type': 'application/octet-stream',
-        };
-        const stream = needle.get(url, data);
-        stream.on('header', (_s, _h) => {
-            headers = _h;
-        });
-        stream.pipe(concatStream(buffer => {
-            resolve({buffer, headers});
-        })).on('error', reject);
-    });
-
-const downloadDataByUrl = async url => {
-    const {buffer} = await downloadGetBufferAndHeaders(url);
-
-    return buffer;
-};
+const getBufferByUrl = (url, data) =>
+    fetch(url)
+        .then(res => res.buffer());
 
 const getBufferAndType = async (url, data) => {
-    const {buffer, headers} = await downloadGetBufferAndHeaders(url, data);
-    const contentType = headers['content-type'] || mime.lookup(urlParse(url).pathname);
+    const res = await fetch(url, data);
+    const buffer = await res.buffer();
+    const contentType = await res.headers.get('content-type') || mime.lookup(urlParse(url).pathname);
     const type = contentType.split(';');
-
     return {buffer, type};
 };
 
 const getImageOpts = ({buffer, type}) =>
     ({size: buffer.length, mymetype: type});
-
-// const getImgLinkBody = (fileName, uri, sender) =>
-//     getBody(getImgLink(fileName, uri), sender);
-
-// TODO: it's outdated now
-// isMatrixMessage: content => isTaggedMatrixMessage(deskypeify(content)),
-// isMatrixImage: ({original_file_name: name, path}) =>
-//     (isTaggedMatrixMessage(name) || isFilenameTagged(path)),
 
 module.exports = {
     tagMatrixMessage,
@@ -301,8 +264,7 @@ module.exports = {
     getNameToSkype,
     getRoomName,
     getBufferAndType,
-    downloadDataByUrl,
+    getBufferByUrl,
     getFullSizeImgUrl,
     getImageOpts,
-    // getImgLinkBody,
 };

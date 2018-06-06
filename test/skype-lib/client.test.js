@@ -37,7 +37,7 @@ const skypeLib = proxyquire('../../src/lib/skype-lib/client',
         '../../utils': {
             getDisplayName: getDisplayNameStub,
             getRoomName: getRoomNameStub,
-            downloadDataByUrl: downloadDataByUrlStub,
+            getBufferByUrl: downloadDataByUrlStub,
         },
     });
 
