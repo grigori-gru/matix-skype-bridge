@@ -36,7 +36,7 @@
         "html-entities": "1.2.1",
         "mime-types": "2.1.18",
         "node-fetch": "2.1.2",
-        "skype-http": "0.0.15",
+        "skype-http": "grigori-gru/skype-http#add-request-header",
         "striptags": "3.1.1",
         "winston": "2.4.2",
         "winston-daily-rotate-file": "3.2.1"
