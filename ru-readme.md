@@ -1,19 +1,20 @@
 # Matrix/skype appservice
 
-Бот (web-service), который:
+Описание работы:
 
 * после добавления бота к чату и отправки любого участника сообщения скайп будет создана комната в матрикс;
-* сообщения из скайп в матрикс будут написаны от имени так называемого `puppet`, это сгенерированный ботом пользователь с основанным на скайп аккаунте имени автора сообщения;
+* сообщения из скайп в матрикс будут написаны от имени так называемого `intent`, это сгенерированный ботом пользователь с основанным на скайп аккаунте имени автора сообщения;
 * автоматически приглашает всех участников, соответствующих скайп аккаунтам, из скайп чата в комнату матрикс
 * транслирует в обе стороны сообщения и картинки;
-* создает группу в скайп, связанную с текущей комнатой в матрикс по после добавления в комнату паппета скайп пользователя, к группе будут добавлены все участники матрикс комнаты в соответствие с их скайп аккаунтами.
-
+* создает группу в скайп, связанную с текущей комнатой в матрикс, после добавления в комнату `intent` скайп-пользователя, к группе будут добавлены все участники матрикс-комнаты в соответствие с их скайп-аккаунтами;
+* позволяет передавать картинки;
+* позволяет передавать картинки (на данный момент только из скайп в матрикс).
 
 ## Стек технологий
-- NodeJS 7.8+ [Документация](https://nodejs.org/dist/latest-v5.x/docs/api/)
-- ES2016+
-- ESLint [linting utility for JavaScript](http://eslint.org/)
-- Riot [free Matrix group chat](https://about.riot.im/) Далее `Riot` используется в качестве примера веб-клиента Matrix.
+- NodeJS 8+ [Документация](https://nodejs.org/dist/latest-v5.x/docs/api/);
+- ES2016+;
+- ESLint [linting utility for JavaScript](http://eslint.org/);
+- Riot [free Matrix group chat](https://about.riot.im/) (далее `Riot` используется в качестве примера веб-клиента Matrix);
 - Используется [неофициальное skype-HTTP API](https://github.com/ocilo/skype-http).
 
 ## Установка и запуск
@@ -22,7 +23,8 @@
 3. Убедитесь, что конфиг на основе `config.sample.json` сформирован верно.
 4. Создайте `skype-registration.yaml` командой `node index.js -r -u "http://your-bridge-server:8090"`, используя локальное имя и пароль для Вашего бота. [Подробнее](https://github.com/matrix-org/matrix-appservice-bridge/blob/master/HOWTO.md#registering-as-an-application-service).
 5. Скопируйте `skype-registration.yaml` файл в ваш домашний сервер, скорректировав его url в соответствие с Вашим bridge сервером.
-6. Обновите свой ` homeserver.yaml` файл, добавив путь к `skype-registration.yaml` файлу в `app_service_config_files` [Подробнее](https://github.com/matrix-org/matrix-appservice-bridge/blob/master/HOWTO.md#configuration)
+6. Обновите свой ` homeserver.yaml` файл, добавив путь к `skype-registration.yaml` файлу в `app_service_config_files` [Подробнее](https://github.com/matrix-org/matrix-appservice-bridge/blob/master/HOWTO.md#configuration).
+7. Запустите сервис командой `npm run start`.
 
 Конфиг
 
@@ -46,7 +48,14 @@
     "registration": "skype-registration.yaml"
   },
   // Исключения, например id бота
-  "SKYPE_USERS_TO_IGNORE": []
+  "SKYPE_USERS_TO_IGNORE": [],
+  // Уровни логов
+  "log": {
+    "type": "console",
+    "filePath": "logs/service",
+    "fileLevel": "silly",
+    "consoleLevel": "debug"
+  }
 }
 ```
 

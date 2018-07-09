@@ -30,17 +30,16 @@
         "test"
     ],
     "dependencies": {
+        "tmp-promise": "1.0.4",
         "readline-sync": "1.4.9",
         "matrix-appservice-bridge": "1.4.0",
-        "concat-stream": "1.6.2",
         "html-entities": "1.2.1",
         "mime-types": "2.1.18",
-        "needle": "2.2.1",
         "node-fetch": "2.1.2",
-        "skype-http": "0.0.15",
+        "skype-http": "grigori-gru/skype-http#add-request-header",
         "striptags": "3.1.1",
         "winston": "2.4.2",
-        "winston-daily-rotate-file": "3.1.4"
+        "winston-daily-rotate-file": "3.2.1"
     },
     "devDependencies": {
         "chai": "4.1.2",

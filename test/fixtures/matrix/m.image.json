@@ -1,0 +1,33 @@
+{
+    "id": "hp8nvbrto0800",
+    "data": {
+        "age": 107,
+        "content": {
+            "body": "photo_2018-03-27_16-30-18.jpg",
+            "info": {
+                "h": 968,
+                "mimetype": "image/jpeg",
+                "size": 111536,
+                "thumbnail_info": {
+                    "h": 600,
+                    "mimetype": "image/jpeg",
+                    "size": 80456,
+                    "w": 793
+                },
+                "thumbnail_url": "mxc://test.domain/QXlxZyzAatdRwwRwazAXagGd",
+                "w": 1280
+            },
+            "msgtype": "m.image",
+            "url": "mxc://test.domain/SgAJGCIWsRUiQagLFjvJCTlO"
+        },
+        "event_id": "$152777716772XZaBq:test.domain",
+        "origin_server_ts": 1527777167105,
+        "room_id": "!WTikdyewCmGaqmyVlg:test.domain",
+        "sender": "@gv_grudinin:test.domain",
+        "type": "m.room.message",
+        "unsigned": {
+            "age": 107
+        },
+        "user_id": "@gv_grudinin:test.domain"
+    }
+}

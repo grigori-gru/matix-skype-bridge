@@ -1,5 +1,3 @@
-const concatStream = require('concat-stream');
-const needle = require('needle');
 const mime = require('mime-types');
 const {parse: urlParse} = require('url');
 const fetch = require('node-fetch');
@@ -23,28 +21,8 @@ const {
     matrixUserTag,
     delim,
     matrixRoomTag,
+    fullImgPathParams,
 } = require('./config.js');
-
-// // check if tag is right before file extension
-// const FILENAME_TAG_PATTERN = /^.+_mx_\..+$/;
-
-// const isFilenameTagged = filepath => !!filepath.match(FILENAME_TAG_PATTERN);
-
-// tag the message to know it was sent by the bridge
-
-const downloadGetBufferAndHeaders = (url, data) =>
-    new Promise((resolve, reject) => {
-        let headers = {
-            'content-type': 'application/octet-stream',
-        };
-        const stream = needle.get(url, data);
-        stream.on('header', (_s, _h) => {
-            headers = _h;
-        });
-        stream.pipe(concatStream(buffer => {
-            resolve({buffer, headers});
-        })).on('error', reject);
-    });
 
 const autoTagger = (sender, func) => text =>
     (sender ? text : func(text));
@@ -85,6 +63,8 @@ const isTaggedMatrixMessage = text => {
     return isTagged;
 };
 
+const getFullSizeImgUrl = url => [url, ...fullImgPathParams].join('/');
+
 // ********Name/Alias constructor**********
 // Create or transform matrix/skype names, id, alias to form for each other
 
@@ -99,10 +79,6 @@ const getRoomAlias = (id, prefix = servicePrefix) =>
     sum(matrixRoomTag, getNameDomain(getServiceName(id, prefix)));
 
 const getSkypeID = (name, prefix = skypePrefix) => sum(prefix, delim, name);
-
-const getNameFromId = id => id.replace(getPrefix(skypePrefix, delim));
-
-// const getMatrixRoomAlias = skypeConverstaion => toMatrixFormat(skypeConverstaion);
 
 const getNameFromSkypeId = name => {
     const prefix = name.includes(skypePrefix) ? skypePrefix : skypeTypePrefix;
@@ -124,6 +100,10 @@ const toSkypeFormat = str => {
 };
 
 const getMatrixRoomId = conversation => toMatrixFormat(conversation).replace(delim, '^');
+
+// const getImgLink = (fileName, uri) =>
+//     `[Image] (${fileName}) ${uri}`;
+
 
 // **********Predicates***************
 const isIgnoreMemberEvent = (puppetId, {membership, state_key: invitedUser}) => {
@@ -166,18 +146,10 @@ const getTextContent = (name, text) => sum(name, delim, '\n', text);
 const getSkypeRoomFromAliases = aliases =>
     (aliases ? getUserId(aliases.find(isMatrixAlias), matrixRoomTag) : aliases);
 
-const getBody = (content, senderId, html) => {
-    const body = {
-        body: tag(content, senderId),
-        msgtype: textMatrixType,
-    };
-    // if (html) {
-    //     // eslint-disable-next-line
-    //     body.formatted_body = html;
-    //     body.format = 'org.matrix.custom.html';
-    // }
-    return body;
-};
+const getBody = (content, senderId) => ({
+    body: tag(content, senderId),
+    msgtype: textMatrixType,
+});
 
 const getMatrixUsers = (users, prefix) =>
     users
@@ -196,7 +168,7 @@ const getSkypeConverstionType = (type = '') =>
 // This one should be made over
 const getAvatarUrl = id => {
     if (isSkypeId(id)) {
-        return `https://avatars.skype.com/v1/avatars/${entities.encode(getNameFromId(id))}/public?returnDefaultImage=false&cacheHeaders=true`;
+        return `https://avatars.skype.com/v1/avatars/${entities.encode(getNameFromSkypeId(id))}/public?returnDefaultImage=false&cacheHeaders=true`;
     }
 };
 
@@ -246,25 +218,20 @@ const getRoomName = roomId => {
         });
 };
 
-const getBufferAndType = (url, data) =>
-    downloadGetBufferAndHeaders(url, data)
-        .then(({buffer, headers}) => {
-            let type;
-            const contentType = headers['content-type'];
-            if (contentType) {
-                type = contentType;
-            } else {
-                type = mime.lookup(urlParse(url).pathname);
-            }
-            [type] = type.split(';');
+const getBufferByUrl = (url, data) =>
+    fetch(url)
+        .then(res => res.buffer());
 
-            return {buffer, type};
-        });
+const getBufferAndType = async (url, data) => {
+    const res = await fetch(url, data);
+    const buffer = await res.buffer();
+    const contentType = await res.headers.get('content-type') || mime.lookup(urlParse(url).pathname);
+    const type = contentType.split(';');
+    return {buffer, type};
+};
 
-// TODO: it's outdated now
-// isMatrixMessage: content => isTaggedMatrixMessage(deskypeify(content)),
-// isMatrixImage: ({original_file_name: name, path}) =>
-//     (isTaggedMatrixMessage(name) || isFilenameTagged(path)),
+const getImageOpts = ({buffer, type}) =>
+    ({size: buffer.length, mymetype: type});
 
 module.exports = {
     tagMatrixMessage,
@@ -276,7 +243,6 @@ module.exports = {
     getMatrixUser,
     getRoomAlias,
     getSkypeID,
-    getNameFromId,
     getMatrixRoomId,
     getNameFromSkypeId,
     toMatrixFormat,
@@ -298,4 +264,7 @@ module.exports = {
     getNameToSkype,
     getRoomName,
     getBufferAndType,
+    getBufferByUrl,
+    getFullSizeImgUrl,
+    getImageOpts,
 };

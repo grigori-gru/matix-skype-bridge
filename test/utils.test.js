@@ -1,12 +1,15 @@
 const nock = require('nock');
 const {expect} = require('chai');
-const {servicePrefix, SKYPE_USERS_TO_IGNORE, matrixUserTag, delim, skypePrefix, puppet, URL_BASE, skypeTypePrefix} = require('../src/config.js');
+const {servicePrefix, SKYPE_USERS_TO_IGNORE, matrixUserTag, delim, skypePrefix, puppet, URL_BASE, skypeTypePrefix, fullImgPathParams} = require('../src/config.js');
 const {data: ghostEventData} = require('./fixtures/matrix/member-ghost.json');
 const {data: puppetEventData} = require('./fixtures/matrix/member-puppet.json');
 const {data: skypebotEventData} = require('./fixtures/matrix/member-skypebot.json');
-// const log = require('../src/modules/log')(module);
+const path = require('path');
+const fs = require('fs').promises;
 
 const {
+    getBufferAndType,
+    getBufferByUrl,
     getInvitedUsers,
     getNameFromSkypeId,
     isTaggedMatrixMessage,
@@ -27,6 +30,7 @@ const {
     getMatrixUsers,
     getNameToSkype,
     tagMatrixMessage,
+    getFullSizeImgUrl,
 } = require('../src/utils');
 
 
@@ -41,7 +45,6 @@ describe('Utils test', () => {
     const testSkypeId1 = getSkypeID(name);
     const testSkypeId2 = getSkypeID(name2);
     const testSkypeId3 = getSkypeID(name3);
-    // eslint-disable-next-line
     before(() => {
         nock(URL_BASE)
             .get(`/profile/${encodeURIComponent(name)}/displayname`)
@@ -294,6 +297,42 @@ describe('Utils test', () => {
             const text = tagMatrixMessage('text');
             const result = isTaggedMatrixMessage(text);
             expect(result).to.be.true;
+        });
+    });
+
+    describe('Test getFullSizeImgUrl', () => {
+        const url = 'https://api.asm.skype.com/v1/objects/0mjfdklbnd';
+        it('Expect get correct url', () => {
+            const result = getFullSizeImgUrl(url);
+            const [p1, p2] = fullImgPathParams;
+            const expectedUrl = `${url}/${p1}/${p2}`;
+            expect(result).to.be.equal(expectedUrl);
+        });
+    });
+    describe('Test correct getBuf using fetch and native js', () => {
+        const testImagePath = path.resolve(__dirname, './fixtures/test-image.jpg');
+        const testUrl = 'http://some/test/url';
+        const headers = {'Content-Type': 'image/jpeg'};
+
+        beforeEach(() => {
+            nock(testUrl)
+                .get('')
+                .replyWithFile(200, testImagePath, headers);
+        });
+
+        it('expect function return correct buffer and type by url', async () => {
+            const {buffer, type} = await getBufferAndType(testUrl);
+            const expectedBuffer = await fs.readFile(testImagePath);
+
+            expect(Object.keys(buffer).length).to.be.equal(Object.keys(expectedBuffer).length);
+            expect(type).to.be.deep.equal([headers['Content-Type']]);
+        });
+
+        it('expect function return correct buffer and type by url', async () => {
+            const buffer = await getBufferByUrl(testUrl);
+            const expectedBuffer = await fs.readFile(testImagePath);
+
+            expect(Object.keys(buffer).length).to.be.equal(Object.keys(expectedBuffer).length);
         });
     });
 });

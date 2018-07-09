@@ -20,8 +20,10 @@ const deskypeify = str => {
     if (!str) {
         return str;
     }
+
     const edit = str.match(/<e_m[^>]*>\s*$/i) !== null || str.match(/<e_m[^>]*>\s*<[^>]*e_m[^>]*>\s*$/i) !== null;
     const result = entities.decode(striptags(str));
+
     /* istanbul ignore next */
     return edit ? `[edit] ${result}` : result;
 };

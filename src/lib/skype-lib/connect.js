@@ -15,7 +15,7 @@ module.exports = async auth => {
         await api.setStatus('Online');
         return api;
     } catch (err) {
-        log.error(err);
+        log.error('Skype connection failed\n', err);
         process.exit(0);
     }
 };

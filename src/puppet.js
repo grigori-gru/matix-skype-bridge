@@ -1,4 +1,3 @@
-const Promise = require('bluebird');
 const matrixSdk = require('matrix-js-sdk');
 const fs = require('fs');
 const readline = require('readline-sync');
@@ -9,11 +8,12 @@ module.exports = class Puppet {
     /**
      *
      * @param {string} pathToConfig path to config file
+     * @param {Object} client optionaly add matrix client, test only
      */
-    constructor(pathToConfig) {
+    constructor(pathToConfig, client) {
         this.pathToConfig = pathToConfig;
-        this.client = null;
-        this.skypeRooms = {};
+        this.client = client;
+        this.matrixRoomMembers = {};
     }
 
     /**
@@ -31,7 +31,7 @@ module.exports = class Puppet {
         this.client.startClient();
         return new Promise((resolve, _reject) => {
             this.matrixRoomMembers = {};
-            this.client.on('RoomState.members', (event, state, _member) => {
+            this.client.on('RoomState.members', (event, state) => {
                 this.matrixRoomMembers[state.roomId] = Object.keys(state.members);
             });
 
@@ -95,7 +95,8 @@ module.exports = class Puppet {
     getRoomAliases(matrixRoomId) {
         const room = this.client.getRooms()
             .find(({roomId}) => roomId === matrixRoomId);
-        return room ? room.getAliases : room;
+
+        return room ? room.getAliases() : room;
     }
 
     /**
@@ -112,7 +113,7 @@ module.exports = class Puppet {
             if (err.message === 'No known servers') {
                 log.warn('we cannot use this room anymore because you cannot currently rejoin an empty room (synapse limitation? riot throws this error too). we need to de-alias it now so a new room gets created that we can actually use.');
 
-                return err.message;
+                return true;
             }
             log.warn('ignoring error from puppet join room: ', err.message);
         }
@@ -162,12 +163,11 @@ module.exports = class Puppet {
     }
 
     /**
-     * Save a skype conversation id
-     *
-     * @param {string} matrixRoomId matrix room id
-     * @param {string} skypeConversationId skype conversation id
+     * Turn an MXC URL into an HTTP one
+     * @param {string} url MXC URL
+     * @returns {?string} url or null
      */
-    saveRoom(matrixRoomId, skypeConversationId) {
-        this.skypeRooms[matrixRoomId] = skypeConversationId;
+    getHttpUrl(url) {
+        return this.getClient().mxcUrlToHttp(url);
     }
 };

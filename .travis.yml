@@ -8,8 +8,7 @@ install:
 
 branches:
   only:
-    - master
-    - dev
+    - /.*/
 
 script:
   - npm run lint

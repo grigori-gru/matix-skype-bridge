@@ -6,10 +6,12 @@ chai.use(sinonChai);
 const proxyquire = require('proxyquire');
 const {getMatrixUser, getRoomAlias, tagMatrixMessage, getTextContent, toMatrixFormat} = require('../../src/utils');
 const {Bridge, Intent} = require('matrix-appservice-bridge');
-// const log = require('../../src/modules/log')(module);
+const log = require('../../src/modules/log')(module);
 
 const {data: ghostEventData} = require('../fixtures/matrix/member-ghost.json');
 const {data: textEventData} = require('../fixtures/matrix/text.msg.json');
+const {data: fileEventData} = require('../fixtures/matrix/m.file.json');
+const {data: imageEventData} = require('../fixtures/matrix/m.image.json');
 
 const Puppet = require('../../src/puppet');
 const getDisplayNameStub = stub();
@@ -32,6 +34,7 @@ const userSkype = {personId: '28:concierge', mri: '28:concierge', displayName: '
 const userBob = {personId: '8:live:bob', mri: '8:live:bob', displayName: 'user Bob', profile: {avatarUrl: 'http://userBobAvatar'}};
 
 const matrixRoomId = 'matrixRoomId';
+const testUrl = 'http://testUrl';
 
 const puppetClientStub = {
     matrixRoomMembers: {
@@ -46,10 +49,13 @@ const puppetClientStub = {
 puppetStub.getClient.returns(puppetClientStub);
 puppetStub.getMatrixRoomMembers.callsFake(id => puppetClientStub.matrixRoomMembers[id]);
 puppetStub.getUserId.returns(getMatrixUser('newskypebot'));
+puppetStub.getHttpUrl.returns(testUrl);
 
 const createConversationStub = stub();
 const setConversationTopicStub = stub();
 const addMemberToConversationStub = stub();
+const sendImageStub = stub();
+
 const skypeClientMock = {
     contacts: [
         userIvan,
@@ -91,6 +97,7 @@ const skypeClientMock = {
     createConversation: createConversationStub,
     setConversationTopic: setConversationTopicStub,
     addMemberToConversation: addMemberToConversationStub,
+    sendImage: sendImageStub,
 };
 
 getContactsStub.resolves(skypeClientMock.contacts);
@@ -132,92 +139,157 @@ const state = {
 const logDebugStub = stub();
 const setRoomAliasStub = stub();
 const getRoomNameStub = stub();
+const logInfoStub = stub();
+const downloadDataByUrlStub = stub();
 
 const handlers = proxyquire('../../src/lib/matrix-handler/handlers', {
     '../../utils': {
-        getDisplayName: getDisplayNameStub,
-        setRoomAlias: setRoomAliasStub,
-        getRoomName: getRoomNameStub,
+        'getDisplayName': getDisplayNameStub,
+        'setRoomAlias': setRoomAliasStub,
+        'getRoomName': getRoomNameStub,
+        'getBufferByUrl': downloadDataByUrlStub,
+        '@global': true,
     },
-    '../../modules/log': () => ({
-        debug: logDebugStub,
-        warn: logWarnStub,
-        error: logErrorStub,
+    '../../modules/log': module => ({
+        'debug': logDebugStub,
+        'warn': logWarnStub,
+        'error': logErrorStub,
+        'info': logInfoStub,
+        '@global': true,
     }),
 });
 // logDebugStub.callsFake(log.debug);
 
-const {handleMatrixMessageEvent, handleMatrixMemberEvent} = handlers(state);
+const {handleMatrixMessageEvent, handleMatrixMemberEvent, testOnly: {getMatrixPayload}} = handlers(state);
+const skypeRoomName = 'skypeRoomName';
 
-describe('Integ matrix handler test', () => {
+describe('Matrix handler integ testing', () => {
     const existRoom = 'existRoom';
 
-    afterEach(() => {
-        puppetStub.getRoomAliases.reset();
+    beforeEach(() => {
+        logDebugStub.callsFake(log.debug);
+        logErrorStub.callsFake(log.error);
+        logInfoStub.callsFake(log.info);
+        logWarnStub.callsFake(log.warn);
     });
 
-    it('Text message testing', async () => {
-        puppetStub.getRoomAliases.returns([getRoomAlias(toMatrixFormat(existRoom))]);
-        const getDisplayName = sender => `${sender}DisplayName`;
-        getDisplayNameStub.callsFake(getDisplayName);
-        await handleMatrixMessageEvent(textEventData);
-        const text = tagMatrixMessage(textEventData.content.body);
-        const expectedText = {textContent: getTextContent(getDisplayName(textEventData.sender), text)};
-        expect(sendMessageStub).to.be.calledWithExactly(expectedText, existRoom);
-    });
-
-    it('Expect undefined returns if no data we get', async () => {
-        const msgtype = 'unexpected';
-        const messageData = {
-            content: {
-                msgtype,
-            },
-        };
-        await handleMatrixMessageEvent(messageData);
-        expect(logWarnStub).to.be.calledWithExactly('dont know how to handle this msgtype', msgtype);
-    });
-});
-
-describe('Integ matrix member event handler test', () => {
     afterEach(() => {
         logDebugStub.reset();
-        puppetStub.getRoomAliases.reset();
-        joinRoomStub.reset();
+        logErrorStub.reset();
+        logInfoStub.reset();
+        logWarnStub.reset();
     });
 
-    it('Handle invite ghost event if skype conversation is already exists', async () => {
-        const existRoom = 'existRoom';
-        const {room_id: matrixRoomId} = ghostEventData;
-        const skypeRoomName = 'skypeRoomName';
-        getRoomNameStub.returns(skypeRoomName);
+    describe('Integ message matrix handler test', () => {
+        afterEach(() => {
+            puppetStub.getRoomAliases.reset();
+            sendMessageStub.reset();
+            sendImageStub.reset();
+        });
 
-        puppetStub.getRoomAliases.returns([getRoomAlias(toMatrixFormat(existRoom))]);
+        it('Text message testing', async () => {
+            puppetStub.getRoomAliases.returns([getRoomAlias(toMatrixFormat(existRoom))]);
+            const getDisplayName = sender => `${sender}DisplayName`;
+            getDisplayNameStub.callsFake(getDisplayName);
+            await handleMatrixMessageEvent(textEventData);
+            const text = tagMatrixMessage(textEventData.content.body);
+            const expectedText = {textContent: getTextContent(getDisplayName(textEventData.sender), text)};
+            expect(sendMessageStub).to.be.calledWithExactly(expectedText, existRoom);
+            expect(sendImageStub).not.to.be.called;
+        });
 
-        await handleMatrixMemberEvent(ghostEventData);
-
-        expect(logDebugStub).not.to.be.calledWithExactly('ignored a matrix event');
-        expect(addMemberToConversationStub).to.be.calledWithExactly(matrixRoomId, userAscend.personId);
-        expect(joinRoomStub).not.to.be.called;
+        it('Expect undefined returns if no data we get', async () => {
+            const msgtype = 'unexpected';
+            const messageData = {
+                content: {
+                    msgtype,
+                },
+            };
+            await handleMatrixMessageEvent(messageData);
+            expect(sendMessageStub).not.to.be.called;
+            expect(sendImageStub).not.to.be.called;
+        });
     });
 
-    it('Handle invite ghost event', async () => {
-        const {room_id: matrixRoomId} = ghostEventData;
-        const skypeRoomName = 'skypeRoomName';
-        const newSkypeConversation = 'newSkypeConversation';
-        getRoomNameStub.returns(skypeRoomName);
-        createConversationStub.returns(newSkypeConversation);
+    describe('Integ matrix member event handler test', () => {
+        afterEach(() => {
+            logDebugStub.reset();
+            puppetStub.getRoomAliases.reset();
+            joinRoomStub.reset();
+        });
 
-        await handleMatrixMemberEvent(ghostEventData);
+        it('Handle invite ghost event if skype conversation is already exists', async () => {
+            const {room_id: matrixRoomId} = ghostEventData;
+            getRoomNameStub.returns(skypeRoomName);
 
-        expect(logErrorStub).not.to.be.called;
-        expect(logDebugStub).not.to.be.calledWithExactly('ignored a matrix event');
-        expect(bridgeBot.getJoinedMembers).to.be.calledWithExactly(matrixRoomId);
-        expect(joinRoomStub).to.be.calledWithExactly(matrixRoomId);
-        expect(createConversationStub).to.be.calledWithExactly({
-            users: [userBob.personId],
-            admins: [`8:${skypeClientMock.context.username}`]});
+            puppetStub.getRoomAliases.returns([getRoomAlias(toMatrixFormat(existRoom))]);
 
-        expect(setRoomAliasStub).to.be.calledWithExactly(matrixRoomId,
-            getRoomAlias(toMatrixFormat(newSkypeConversation)));
+            await handleMatrixMemberEvent(ghostEventData);
+
+            expect(logDebugStub).not.to.be.calledWithExactly('ignored a matrix event');
+            expect(addMemberToConversationStub).to.be.calledWithExactly(matrixRoomId, userAscend.personId);
+            expect(joinRoomStub).not.to.be.called;
+        });
+
+        it('Handle invite ghost event', async () => {
+            const {room_id: matrixRoomId} = ghostEventData;
+            const newSkypeConversation = 'newSkypeConversation';
+            getRoomNameStub.returns(skypeRoomName);
+            createConversationStub.returns(newSkypeConversation);
+
+            await handleMatrixMemberEvent(ghostEventData);
+
+            expect(logErrorStub).not.to.be.called;
+            expect(logDebugStub).not.to.be.calledWithExactly('ignored a matrix event');
+            expect(bridgeBot.getJoinedMembers).to.be.calledWithExactly(matrixRoomId);
+            expect(joinRoomStub).to.be.calledWithExactly(matrixRoomId);
+            expect(createConversationStub).to.be.calledWithExactly({
+                users: [userBob.personId],
+                admins: [`8:${skypeClientMock.context.username}`]});
+
+            expect(setRoomAliasStub).to.be.calledWithExactly(matrixRoomId,
+                getRoomAlias(toMatrixFormat(newSkypeConversation)));
+        });
+    });
+
+    describe('Integ matrix file test', () => {
+        afterEach(() => {
+            sendMessageStub.reset();
+            sendImageStub.reset();
+            logErrorStub.reset();
+        });
+
+        it('Expect file from matrix to be send to skype', async () => {
+            const data = await getMatrixPayload(fileEventData);
+            log.debug(data);
+            const {skypeConversation, displayName, url} = data;
+            await handleMatrixMessageEvent(fileEventData);
+            expect(sendImageStub).not.to.be.calledWithExactly({skypeConversation, body: url, displayName});
+            expect(sendMessageStub).to.be.called;
+        });
+
+        // it('Expect file from matrix to be send to skype', async () => {
+        //     downloadDataByUrlStub.throws();
+        //     await handleMatrixMessageEvent(fileEventData);
+
+        //     expect(sendImageStub).not.to.be.called;
+        // });
+    });
+
+    describe('Integ matrix image test', () => {
+        afterEach(() => {
+            sendMessageStub.reset();
+            sendImageStub.reset();
+            logErrorStub.reset();
+        });
+
+        it('Expect image from matrix to be send to skype', async () => {
+            await handleMatrixMessageEvent(imageEventData);
+
+            expect(logErrorStub).not.to.be.called;
+            expect(sendMessageStub).not.to.be.called;
+            expect(sendImageStub).to.be.called;
+        });
     });
 });
+
