@@ -1,13 +1,8 @@
 const path = require('path');
 
-const env = process.env.NODE_ENV || 'development';
+const configPath = process.env.NODE_ENV ? './' : './test/fixtures/';
 
-const configPath = {
-    development: './',
-    test: './test/fixtures/',
-};
-
-const confgigFilepath = path.resolve(configPath[env], 'config.json');
+const confgigFilepath = path.resolve(configPath, 'config.json');
 
 const config = require(confgigFilepath);
 

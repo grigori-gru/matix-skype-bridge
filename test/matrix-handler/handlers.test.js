@@ -133,7 +133,6 @@ const state = {
     skypeClient: skypeClientMock,
     puppet: puppetStub,
     bridge: bridgeStub,
-
 };
 
 const logDebugStub = stub();
