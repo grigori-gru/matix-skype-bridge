@@ -1,0 +1,21 @@
+{
+    "id": "hp8nvbrto0800",
+    "data": {
+        "age": 158,
+        "content": {
+            "body": "Help info",
+            "format": "org.matrix.custom.html",
+            "formatted_body": "some text here",
+            "msgtype": "m.text"
+        },
+        "event_id": "$1526654803300UBeWK:test.domain",
+        "origin_server_ts": 1532952502478,
+        "room_id": "!DmUyncsCEhwyCZMVec:test.domain",
+        "sender": "@gv_grudinin:test.domain",
+        "type": "m.room.message",
+        "unsigned": {
+            "age": 158
+        },
+        "user_id": "@gv_grudinin:test.domain"
+    }
+}

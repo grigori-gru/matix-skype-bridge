@@ -12,6 +12,7 @@ const {data: ghostEventData} = require('../fixtures/matrix/member-ghost.json');
 const {data: textEventData} = require('../fixtures/matrix/text.msg.json');
 const {data: fileEventData} = require('../fixtures/matrix/m.file.json');
 const {data: imageEventData} = require('../fixtures/matrix/m.image.json');
+const {data: commandTextEventData} = require('../fixtures/matrix/command-text-msg.json');
 
 const Puppet = require('../../src/puppet');
 const getDisplayNameStub = stub();
@@ -206,6 +207,28 @@ describe('Matrix handler integ testing', () => {
             };
             await handleMatrixMessageEvent(messageData);
             expect(sendMessageStub).not.to.be.called;
+            expect(sendImageStub).not.to.be.called;
+        });
+    });
+
+    describe('Integ jiraBot command message matrix handler test', () => {
+        afterEach(() => {
+            puppetStub.getRoomAliases.reset();
+            sendMessageStub.reset();
+            sendImageStub.reset();
+        });
+
+        it('command text message testing', async () => {
+            puppetStub.getRoomAliases.returns([getRoomAlias(toMatrixFormat(existRoom))]);
+            const getDisplayName = sender => `${sender}DisplayName`;
+            getDisplayNameStub.callsFake(getDisplayName);
+
+            await handleMatrixMessageEvent(commandTextEventData);
+
+            const text = tagMatrixMessage(commandTextEventData.content.formatted_body);
+            const expectedText = {textContent: getTextContent(getDisplayName(commandTextEventData.sender), text)};
+
+            expect(sendMessageStub).to.be.calledWithExactly(expectedText, existRoom);
             expect(sendImageStub).not.to.be.called;
         });
     });
