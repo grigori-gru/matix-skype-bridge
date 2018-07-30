@@ -1,6 +1,6 @@
 const path = require('path');
 
-const configPath = process.env.NODE_ENV ? './' : './test/fixtures/';
+const configPath = process.env.NODE_ENV ? './test/fixtures/' : './';
 
 const confgigFilepath = path.resolve(configPath, 'config.json');
 
