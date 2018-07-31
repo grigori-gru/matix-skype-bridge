@@ -12,7 +12,7 @@ const puppet = new Puppet(path.join(__dirname, './config.json'));
 
 module.exports = async function app() {
     log.info('starting matrix client');
-    // await puppet.startClient();
+    await puppet.startClient();
     this.skypeClient = await skypeConnect(config.skype);
 
     const handleMatrixEvent = data =>
