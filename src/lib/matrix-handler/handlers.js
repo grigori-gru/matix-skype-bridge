@@ -51,12 +51,21 @@ module.exports = ({puppet, bridge, skypeClient}) => {
         return setRoomAlias(matrixRoomId, alias);
     };
 
-    const getMatrixPayload = async ({room_id: matrixRoomId, sender, content: {body, msgtype, url}}) => {
+    const getMatrixPayload = async ({
+        room_id: matrixRoomId,
+        sender,
+        content: {
+            body,
+            msgtype,
+            url,
+            formatted_body: commandBody,
+        }}) => {
         const displayName = await getDisplayName(sender);
+        const msgBody = commandBody || body;
 
         return {
             skypeConversation: getSkypeConversation(matrixRoomId),
-            body: tagMatrixMessage(body),
+            body: tagMatrixMessage(msgBody),
             url: url ? puppet.getHttpUrl(url) : url,
             displayName,
             msgtype,
