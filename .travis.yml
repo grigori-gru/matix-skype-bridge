@@ -3,7 +3,7 @@ node_js:
   - stable
 
 before_install:
-  - npm config set //registry.npmjs.org/:_authToken=$NPM_TOKEN
+  - npm config set //npm.bingo-boom.ru/repository/npm-private/:_authToken=$NPM_TOKEN
 
 install:
   - npm install -g codecov
