@@ -12,10 +12,12 @@ const puppet = new Puppet(path.join(__dirname, './config.json'));
 
 module.exports = async function app() {
     log.info('starting matrix client');
-    await puppet.startClient();
-    const skypeClient = await skypeConnect(config.skype);
+    // await puppet.startClient();
+    this.skypeClient = await skypeConnect(config.skype);
 
-    const handleMatrixEvent = data => matrixEventHandler({puppet, skypeClient, bridge: this.bridge})(data);
+    const handleMatrixEvent = data =>
+        matrixEventHandler({puppet, skypeClient: this.skypeClient, bridge: this.bridge})(data);
+
     const controller = {
         onUserQuery: queriedUser => {
             log.info('got user query', queriedUser);
@@ -38,6 +40,11 @@ module.exports = async function app() {
 
     await this.bridge.run(config.port, config);
 
-    skypeClient.on('event', skypeEventHandler({bridge: this.bridge, puppet, skypeClient}));
-    skypeClient.on('error', skypeErrorHandler);
+    this.skypeClient.on('event', skypeEventHandler({bridge: this.bridge, puppet, skypeClient: this.skypeClient}));
+    this.skypeClient.on('error', async err => {
+        if (err.stack.includes('You must create an endpoint before performing this operation')) {
+            this.skypeClient = await skypeConnect(config.skype);
+        }
+        return skypeErrorHandler(err);
+    });
 };

@@ -34,6 +34,15 @@ const userSkypebot = {personId: '8:live:test_1', mri: '8:live:test_1', displayNa
 const userSkype = {personId: '28:concierge', mri: '28:concierge', displayName: 'Skype', profile: {avatarUrl: 'http://avatarSkype'}};
 const userBob = {personId: '8:live:bob', mri: '8:live:bob', displayName: 'user Bob', profile: {avatarUrl: 'http://userBobAvatar'}};
 
+const contacts = [
+    userIvan,
+    userAscend,
+    userTranslator,
+    userSkypebot,
+    userSkype,
+    userBob,
+];
+
 const matrixRoomId = 'matrixRoomId';
 const testUrl = 'http://testUrl';
 
@@ -58,15 +67,7 @@ const addMemberToConversationStub = stub();
 const sendImageStub = stub();
 
 const skypeClientMock = {
-    contacts: [
-        userIvan,
-        userAscend,
-        userTranslator,
-        userSkypebot,
-        userSkype,
-        userBob,
-    ],
-    // sendImage: sendImageStub,
+    contacts,
     conversations: [
         {
             id: '19:6047833599b1405f8c1e0bf3ed307c9e@thread.skype',
@@ -192,8 +193,10 @@ describe('Matrix handler integ testing', () => {
             const getDisplayName = sender => `${sender}DisplayName`;
             getDisplayNameStub.callsFake(getDisplayName);
             await handleMatrixMessageEvent(textEventData);
+
             const text = tagMatrixMessage(textEventData.content.body);
             const expectedText = {textContent: getTextContent(getDisplayName(textEventData.sender), text)};
+
             expect(sendMessageStub).to.be.calledWithExactly(expectedText, existRoom);
             expect(sendImageStub).not.to.be.called;
         });
@@ -205,7 +208,9 @@ describe('Matrix handler integ testing', () => {
                     msgtype,
                 },
             };
+
             await handleMatrixMessageEvent(messageData);
+
             expect(sendMessageStub).not.to.be.called;
             expect(sendImageStub).not.to.be.called;
         });
@@ -285,17 +290,12 @@ describe('Matrix handler integ testing', () => {
             const data = await getMatrixPayload(fileEventData);
             log.debug(data);
             const {skypeConversation, displayName, url} = data;
+
             await handleMatrixMessageEvent(fileEventData);
+
             expect(sendImageStub).not.to.be.calledWithExactly({skypeConversation, body: url, displayName});
             expect(sendMessageStub).to.be.called;
         });
-
-        // it('Expect file from matrix to be send to skype', async () => {
-        //     downloadDataByUrlStub.throws();
-        //     await handleMatrixMessageEvent(fileEventData);
-
-        //     expect(sendImageStub).not.to.be.called;
-        // });
     });
 
     describe('Integ matrix image test', () => {
