@@ -7,6 +7,7 @@ const {getRoomName,
     setRoomAlias,
     getSkypeMatrixUsers,
     getSkypeRoomFromAliases,
+    htmlToText,
 } = require('../../utils');
 
 module.exports = ({puppet, bridge, skypeClient}) => {
@@ -61,7 +62,7 @@ module.exports = ({puppet, bridge, skypeClient}) => {
             formatted_body: commandBody,
         }}) => {
         const displayName = await getDisplayName(sender);
-        const msgBody = commandBody || body;
+        const msgBody = htmlToText(commandBody) || body;
 
         return {
             skypeConversation: getSkypeConversation(matrixRoomId),

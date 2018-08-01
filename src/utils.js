@@ -1,3 +1,4 @@
+const htmlToText = require('html-to-text');
 const mime = require('mime-types');
 const {parse: urlParse} = require('url');
 const fetch = require('node-fetch');
@@ -233,6 +234,9 @@ const getBufferAndType = async (url, data) => {
 const getImageOpts = ({buffer, type}) =>
     ({size: buffer.length, mymetype: type});
 
+const parseHTML = data =>
+    (data ? htmlToText.fromString(data).trim() : data);
+
 module.exports = {
     tagMatrixMessage,
     sum,
@@ -267,4 +271,5 @@ module.exports = {
     getBufferByUrl,
     getFullSizeImgUrl,
     getImageOpts,
+    htmlToText: parseHTML,
 };

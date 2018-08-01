@@ -8,6 +8,7 @@ const path = require('path');
 const fs = require('fs').promises;
 
 const {
+    htmlToText,
     getBufferAndType,
     getBufferByUrl,
     getInvitedUsers,
@@ -333,6 +334,76 @@ describe('Utils test', () => {
             const expectedBuffer = await fs.readFile(testImagePath);
 
             expect(Object.keys(buffer).length).to.be.equal(Object.keys(expectedBuffer).length);
+        });
+    });
+
+    describe('Test htmlToText', () => {
+        // eslint-disable-next-line
+        const html = `\n    <h5>Use "!kick" command to kick all members from all rooms which last activity are older 01.01.2018<br>\n    example:</h5>\n        &nbsp;&nbsp;&nbsp;&nbsp;<font color="green"><strong>!kick</strong></font><br>\n        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Пользователь @example:matrix.bingo-boom.ru исключен из комнаты BBCOM-1931<br>\n        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Пользователь @example_too:matrix.bingo-boom.ru исключен из комнаты BBCOM-1931<br>\n        &nbsp;&nbsp;&nbsp;&nbsp;<font color="green"><strong>If no rooms are outdated you\'ll get next message</strong></font><br>\n        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;User <font color="green"><strong>"user"</strong></font> has no outdated rooms<br>\n    <h5>Use "!comment" command to comment in jira issue<br>\n    example:</h5>\n        &nbsp;&nbsp;&nbsp;&nbsp;<font color="green"><strong>!comment some text</strong></font><br>\n        &nbsp;&nbsp;&nbsp;&nbsp;text "<font color="green">some text</font>" will be shown in jira comments<br>\n    <h5>Use "!assign" command to assign jira issue<br>\n    example:</h5>\n        &nbsp;&nbsp;&nbsp;&nbsp;<font color="green"><strong>!assign mv_nosak</strong></font>\n        or <font color="green"><strong>!assign Носак</strong></font><br>\n        &nbsp;&nbsp;&nbsp;&nbsp;user \'<font color="green">mv_nosak</font>\' will become assignee for the issue<br><br>\n        &nbsp;&nbsp;&nbsp;&nbsp;<font color="green"><strong>!assign</strong></font><br>\n        &nbsp;&nbsp;&nbsp;&nbsp;you will become assignee for the issue\n    <h5>Use "!move" command to view list of available transitions<br>\n    example:</h5>\n        &nbsp;&nbsp;&nbsp;&nbsp;<font color="green"><strong>!move</strong></font><br>\n        &nbsp;&nbsp;&nbsp;&nbsp;you will see a list:<br>\n        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1) Done<br>\n        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2) On hold<br>\n        &nbsp;&nbsp;&nbsp;&nbsp;Use <font color="green"><strong>"!move done"</strong></font> or\n        <font color="green"><strong>"!move 1"</strong></font>\n    <h5>Use "!spec" command to add watcher for issue<br>\n    example:</h5>\n        &nbsp;&nbsp;&nbsp;&nbsp;<font color="green"><strong>!spec mv_nosak</strong></font>\n        or <font color="green"><strong>!spec Носак</strong></font><br>\n        &nbsp;&nbsp;&nbsp;&nbsp;user \'<font color="green">mv_nosak</font>\' was added in watchers for the issue<br><br>\n    <h5>Use "!prio" command to changed priority issue<br>\n    example:</h5>\n        &nbsp;&nbsp;&nbsp;&nbsp;<font color="green"><strong>!prio</strong></font><br>\n        &nbsp;&nbsp;&nbsp;&nbsp;you will see a list:<br>\n        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;1) Блокирующий<br>\n        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;2) Критический<br>\n        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;3) Highest<br>\n        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br>\n        &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;7) Lowest<br>\n        &nbsp;&nbsp;&nbsp;&nbsp;Use <font color="green"><strong>"!prio Lowest"</strong></font> or\n        <font color="green"><strong>"!prio 7"</strong></font>\n    <h5>Use "!op" command to give moderator rights (admins only)<br>\n    example:</h5>\n        &nbsp;&nbsp;&nbsp;&nbsp;<font color="green"><strong>!op mv_nosak</strong></font><br>\n        &nbsp;&nbsp;&nbsp;&nbsp;user \'<font color="green">mv_nosak</font>\' will become the moderator of the room<br><br>\n    <h5>Use "!invite" command to invite you in room (admins only)<br>\n    example:</h5>\n        &nbsp;&nbsp;&nbsp;&nbsp;<font color="green"><strong>!invite BBCOM-101</strong></font>\n        or <font color="green"><strong>!invite #BBCOM-101:matrix.bingo-boom.ru</strong></font><br>\n        &nbsp;&nbsp;&nbsp;&nbsp;Bot invite you in room for issue <font color="green">BBCOM-101</font><br><br>\n    If you have administrator status, you can invite the bot into the room and he will not be denied:)\n    `;
+
+        const expectedText = `USE "!KICK" COMMAND TO KICK ALL MEMBERS FROM ALL ROOMS WHICH LAST ACTIVITY ARE
+OLDER 01.01.2018
+EXAMPLE:
+!kick
+Пользователь @example:matrix.bingo-boom.ru исключен из комнаты BBCOM-1931
+Пользователь @example_too:matrix.bingo-boom.ru исключен из комнаты BBCOM-1931
+If no rooms are outdated you'll get next message
+User "user" has no outdated rooms
+USE "!COMMENT" COMMAND TO COMMENT IN JIRA ISSUE
+EXAMPLE:
+!comment some text
+text "some text" will be shown in jira comments
+USE "!ASSIGN" COMMAND TO ASSIGN JIRA ISSUE
+EXAMPLE:
+!assign mv_nosakor !assign Носак
+user 'mv_nosak' will become assignee for the issue
+
+!assign
+you will become assignee for the issue USE "!MOVE" COMMAND TO VIEW LIST OF
+AVAILABLE TRANSITIONS
+EXAMPLE:
+!move
+you will see a list:
+1) Done
+2) On hold
+Use "!move done" or "!move 1" USE "!SPEC" COMMAND TO ADD WATCHER FOR ISSUE
+EXAMPLE:
+!spec mv_nosakor !spec Носак
+user 'mv_nosak' was added in watchers for the issue
+
+USE "!PRIO" COMMAND TO CHANGED PRIORITY ISSUE
+EXAMPLE:
+!prio
+you will see a list:
+1) Блокирующий
+2) Критический
+3) Highest
+...
+7) Lowest
+Use "!prio Lowest" or "!prio 7" USE "!OP" COMMAND TO GIVE MODERATOR RIGHTS
+(ADMINS ONLY)
+EXAMPLE:
+!op mv_nosak
+user 'mv_nosak' will become the moderator of the room
+
+USE "!INVITE" COMMAND TO INVITE YOU IN ROOM (ADMINS ONLY)
+EXAMPLE:
+!invite BBCOM-101or !invite #BBCOM-101:matrix.bingo-boom.ru
+Bot invite you in room for issue BBCOM-101
+
+If you have administrator status, you can invite the bot into the room and he
+will not be denied:)`;
+
+        it('expect correct convert if html exists', () => {
+            const text = htmlToText(html);
+
+            expect(text).to.be.equal(expectedText);
+        });
+
+        it.only('Expect empty output if no data', () => {
+            const text = htmlToText();
+
+            expect(text).to.be.undefined;
         });
     });
 });

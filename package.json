@@ -30,14 +30,15 @@
         "test"
     ],
     "dependencies": {
-        "tmp-promise": "1.0.4",
-        "readline-sync": "1.4.9",
-        "matrix-appservice-bridge": "1.4.0",
         "html-entities": "1.2.1",
+        "html-to-text": "^4.0.0",
+        "matrix-appservice-bridge": "1.4.0",
         "mime-types": "2.1.18",
         "node-fetch": "2.1.2",
-        "@bb/skype-http": "latest",
+        "readline-sync": "1.4.9",
+        "skype-http": "0.0.15",
         "striptags": "3.1.1",
+        "tmp-promise": "1.0.4",
         "winston": "2.4.2",
         "winston-daily-rotate-file": "3.2.1"
     },
