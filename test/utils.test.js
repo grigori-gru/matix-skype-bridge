@@ -400,7 +400,7 @@ will not be denied:)`;
             expect(text).to.be.equal(expectedText);
         });
 
-        it.only('Expect empty output if no data', () => {
+        it('Expect empty output if no data', () => {
             const text = htmlToText();
 
             expect(text).to.be.undefined;
