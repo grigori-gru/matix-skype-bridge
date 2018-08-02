@@ -103,6 +103,17 @@ module.exports = api => {
             },
         }),
 
+        getSkypeConversationUsers: async conversation => {
+            try {
+                const skypeConversation = await api.getConversation(conversation);
+
+                return skypeConversation.members;
+            } catch (err) {
+                log.error('No conversation %s in skype', conversation);
+                log.error(err);
+            }
+        },
+
         createConversation: async (usersCollection, roomName) => {
             const users = Object.keys(usersCollection);
             const contacts = await api.getContacts();

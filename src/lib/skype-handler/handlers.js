@@ -11,7 +11,6 @@ const {
     getInvitedUsers,
     getFullSizeImgUrl,
     getImageOpts,
-    // getImgLinkBody,
 } = require('../../utils');
 
 const setGhostAvatar = async (ghostIntent, avatarUrl) => {
@@ -31,19 +30,24 @@ const setGhostAvatar = async (ghostIntent, avatarUrl) => {
 };
 
 const updateIntentProfile = async (ghostIntent, {senderId, senderName, avatarUrl}) => {
-    const client = ghostIntent.getClient();
+    try {
+        const client = ghostIntent.getClient();
 
-    const {avatar_url: currentAvatarUrl, displayName} = await ghostIntent.getProfileInfo(client.credentials.userId);
-    const promiseList = [];
+        const {avatar_url: currentAvatarUrl, displayName} = await ghostIntent.getProfileInfo(client.credentials.userId);
+        const promiseList = [];
 
-    if (!displayName && senderName) {
-        promiseList.push(ghostIntent.setDisplayName(senderName));
+        if (!displayName && senderName) {
+            promiseList.push(ghostIntent.setDisplayName(senderName));
+        }
+        if (!currentAvatarUrl && avatarUrl) {
+            promiseList.push(setGhostAvatar(ghostIntent, avatarUrl));
+        }
+
+        await Promise.all(promiseList);
+    } catch (err) {
+        log.error('Error updating profile of %s %s', senderId, senderName);
+        log.error(err);
     }
-    if (!currentAvatarUrl && avatarUrl) {
-        promiseList.push(setGhostAvatar(ghostIntent, avatarUrl));
-    }
-
-    return Promise.all(promiseList);
 };
 
 const getContent = async (client, {buffer, type}, name) => {
@@ -133,15 +137,15 @@ module.exports = state => {
 
     const sendTextMessage = async ({body, userData}, matrixRoomId) => {
         const client = await getUserClient(matrixRoomId, userData);
+
         return client.sendMessage(matrixRoomId, body);
     };
 
     const inviteSkypeConversationMembers = async (skypeRoom, matrixRoomId) => {
-        // TODO: find a better way to invite real matrix according to skype conversation member
         try {
             const {members: skypeRoomMembers} = await skypeClient.getConversation(skypeRoom);
             const matrixRoomMembers = puppet.getMatrixRoomMembers(matrixRoomId);
-            const invitedUsers = getInvitedUsers(skypeRoomMembers, matrixRoomMembers);
+            const invitedUsers = await getInvitedUsers(skypeRoomMembers, matrixRoomMembers);
             log.debug('invitedUsers', invitedUsers);
 
             return puppet.invite(matrixRoomId, invitedUsers);
