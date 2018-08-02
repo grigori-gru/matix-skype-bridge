@@ -11,13 +11,22 @@ const {getRoomName,
 } = require('../../utils');
 
 module.exports = ({puppet, bridge, skypeClient}) => {
-    const {createConversation, handleMessage} = skypeApi(skypeClient);
+    const {createConversation, handleMessage, getSkypeConversationUsers} = skypeApi(skypeClient);
 
     const getSkypeConversation = matrixRoomId => {
         const roomAliases = puppet.getRoomAliases(matrixRoomId);
         log.debug('matrixRoomId %s has aliases: ', matrixRoomId, roomAliases);
 
         return getSkypeRoomFromAliases(roomAliases);
+    };
+
+    const isUserInSkypeConverstaion = async (matrixRoomId, user) => {
+        const skypeConversation = getSkypeConversation(matrixRoomId);
+        const skypeUsers = await getSkypeConversationUsers(skypeConversation);
+
+        const [skypeUser] = getSkypeMatrixUsers(skypeUsers, [user]);
+
+        return skypeUser;
     };
 
     const inviteUserToSkypeConversation = async (invitedUser, skypeConversation) => {
@@ -87,8 +96,13 @@ module.exports = ({puppet, bridge, skypeClient}) => {
 
         handleMatrixMessageEvent: async data => {
             try {
+                const {sender} = data;
                 const payload = await getMatrixPayload(data);
                 log.info('message from riot with msgtype: ', payload.msgtype);
+
+                if (!isUserInSkypeConverstaion(data.room_id, sender)) {
+                    await skypeClient.addMemberToConversation(payload.skypeConversation, sender);
+                }
 
                 return handleMessage(payload);
             } catch (err) {

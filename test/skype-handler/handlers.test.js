@@ -4,13 +4,15 @@ const sinonChai = require('sinon-chai');
 const {expect} = chai;
 chai.use(sinonChai);
 const proxyquire = require('proxyquire');
+const nock = require('nock');
 
+const {URL_BASE} = require('../../src/config.js');
 const {resource: imageData} = require('../fixtures/skype-image.json');
 const {resource: messageData} = require('../fixtures/skype-message.json');
 const clientLib = require('../../src/lib/skype-lib/client');
 const Puppet = require('../../src/puppet');
 const {Bridge, Intent} = require('matrix-appservice-bridge');
-const {getMatrixUsers, getImageOpts, getBody} = require('../../src/utils');
+const {getMatrixUsers, getImageOpts, getBody, getDefaultMatrixUser, getNameFromSkypeId} = require('../../src/utils');
 const log = require('../../src/modules/log')(module);
 
 const puppetStub = createStubInstance(Puppet);
@@ -121,6 +123,8 @@ const handlers = proxyquire('../../src/lib/skype-handler/handlers', {
 });
 const {messageHandler, imageHandler, testOnly: {getUserClient}} = handlers(state);
 
+const displayname = 'displayname';
+
 describe('Skype Handler testing', () => {
     const contentUrl = 'result';
     beforeEach(() => {
@@ -138,6 +142,21 @@ describe('Skype Handler testing', () => {
             deleteAlias: deleteAliasStub,
         });
         bridgeIntentStub.getProfileInfo.withArgs('userId').returns({'avatar_url': 'currentAvatarUrl', 'displayName': 'displayName'});
+
+        const userNameComp = encodeURIComponent(getDefaultMatrixUser(getNameFromSkypeId(userName.personId)));
+        const userAscendComp = encodeURIComponent(getDefaultMatrixUser(getNameFromSkypeId(userAscend.personId)));
+        const userSkypebotComp = encodeURIComponent(getDefaultMatrixUser(getNameFromSkypeId(userSkypebot.personId)));
+
+        nock(URL_BASE)
+            .get(`/profile/${userNameComp}/displayname`)
+            .times(2)
+            .reply(200, {displayname})
+            .get(`/profile/${userAscendComp}/displayname`)
+            .times(2)
+            .reply(200, {displayname})
+            .get(`/profile/${userSkypebotComp}/displayname`)
+            .times(2)
+            .reply(200, {displayname});
     });
     describe('Message testing', () => {
         afterEach(() => {

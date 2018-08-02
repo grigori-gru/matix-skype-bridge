@@ -76,6 +76,8 @@ const getNameDomain = name => sum(name, delim, domain);
 const getMatrixUser = (id, prefix = servicePrefix) =>
     sum(matrixUserTag, getNameDomain(getServiceName(id, prefix)));
 
+const getDefaultMatrixUser = id => getMatrixUser(id, '');
+
 const getRoomAlias = (id, prefix = servicePrefix) =>
     sum(matrixRoomTag, getNameDomain(getServiceName(id, prefix)));
 
@@ -136,6 +138,7 @@ const getUserId = (user = '', tag = matrixUserTag) =>
 
 const getSkypeMatrixUsers = (skypeCollection = [], matrixRoomUsers) => {
     const usersIds = matrixRoomUsers.map(user => getUserId(user));
+
     return skypeCollection
         .map(({personId}) => personId)
         .filter(id => usersIds.includes(id));
@@ -157,9 +160,13 @@ const getMatrixUsers = (users, prefix) =>
         .filter(user => !SKYPE_USERS_TO_IGNORE.includes(user))
         .map(user => getMatrixUser(getNameFromSkypeId(user), prefix));
 
-const getInvitedUsers = (skypeRoomMembers, matrixRoomMembers) => {
-    const result = getMatrixUsers(skypeRoomMembers, '')
+const getInvitedUsers = async (skypeRoomMembers, matrixRoomMembers) => {
+    const users = getMatrixUsers(skypeRoomMembers, '')
         .filter(user => !matrixRoomMembers.includes(user));
+    // eslint-disable-next-line
+    const realMatrixUsers = await Promise.all(users.map(isRealMatrixUser));
+    const result = realMatrixUsers.filter(Boolean);
+
     return result.length > 0 ? result : null;
 };
 
@@ -196,9 +203,17 @@ const getDisplayName = matrixId => {
         .then(body =>
             (body.status === 200 ? body.json() : null))
         .then(res =>
-            (res ? res.displayname : res));
+            (res ? res.displayname : res))
+        .catch(err => {
+            log.error(err);
+        });
 };
 
+const isRealMatrixUser = async matrixUserId => {
+    const isReal = await getDisplayName(matrixUserId);
+
+    return isReal ? matrixUserId : isReal;
+};
 const getNameToSkype = sender =>
     getDisplayName(sender)
         .then(displayname => {
@@ -272,4 +287,5 @@ module.exports = {
     getFullSizeImgUrl,
     getImageOpts,
     htmlToText: parseHTML,
+    getDefaultMatrixUser,
 };

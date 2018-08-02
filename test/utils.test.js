@@ -32,6 +32,7 @@ const {
     getNameToSkype,
     tagMatrixMessage,
     getFullSizeImgUrl,
+    getDefaultMatrixUser,
 } = require('../src/utils');
 
 
@@ -49,6 +50,9 @@ describe('Utils test', () => {
     before(() => {
         nock(URL_BASE)
             .get(`/profile/${encodeURIComponent(name)}/displayname`)
+            .times(2)
+            .reply(200, {displayname: expectedData})
+            .get(`/profile/${encodeURIComponent(getDefaultMatrixUser(name))}/displayname`)
             .times(2)
             .reply(200, {displayname: expectedData})
             .get(`/rooms/${roomId}/state/m.room.name`)
@@ -127,20 +131,20 @@ describe('Utils test', () => {
     });
 
     describe('test getInvitedUsers', () => {
-        it('expect to invite user for skype converstion if he is not in matrix room but his puppet in', () => {
+        it('expect to invite user for skype converstion if he is not in matrix room but his puppet in', async () => {
             const skypeUsers = [
                 ...SKYPE_USERS_TO_IGNORE,
                 getSkypeID(name),
                 getSkypeID(name2),
             ];
             const matrixRoomUsers = [
-                getMatrixUser(name2),
-                getMatrixUser(name, ''),
+                getDefaultMatrixUser(name2),
+                getMatrixUser(name),
                 getMatrixUser(SKYPE_USERS_TO_IGNORE[0]),
             ];
-            const result = getInvitedUsers(skypeUsers, matrixRoomUsers);
+            const result = await getInvitedUsers(skypeUsers, matrixRoomUsers);
             const expected = [
-                getMatrixUser(name2, ''),
+                getDefaultMatrixUser(name),
             ];
             expect(result).to.be.deep.equal(expected);
         });
