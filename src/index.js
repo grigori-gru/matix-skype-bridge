@@ -42,9 +42,15 @@ module.exports = async function app() {
 
     this.skypeClient.on('event', skypeEventHandler({bridge: this.bridge, puppet, skypeClient: this.skypeClient}));
     this.skypeClient.on('error', async err => {
-        if (err.stack.includes('You must create an endpoint before performing this operation')) {
+        if (
+            err.stack.includes('You must create an endpoint before performing this operation') ||
+            err.stack.includes('The provided registration token is expired, and no authentication ticket was provided.')
+        ) {
+            log.error(err);
+            log.warn('Skypeclient should reconnect');
             this.skypeClient = await skypeConnect(config.skype);
+        } else {
+            return skypeErrorHandler(err);
         }
-        return skypeErrorHandler(err);
     });
 };
