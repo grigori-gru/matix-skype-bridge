@@ -12,7 +12,7 @@
         "origin_server_ts": 1526655377469,
         "room_id": "!zefkeiTToGYtRpFYzZ:test.domain",
         "sender": "@gv_grudinin:test.domain",
-        "state_key": "@skype_ODpsaXZlOmd2X2dydWRpbmlu:test.domain",
+        "state_key": "@skype_70x6rubpcmx6exjzcxt7at39dtmpw:test.domain",
         "type": "m.room.member",
         "unsigned": {
             "age": 187

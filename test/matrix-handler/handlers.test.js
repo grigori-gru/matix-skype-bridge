@@ -4,7 +4,7 @@ const sinonChai = require('sinon-chai');
 const {expect} = chai;
 chai.use(sinonChai);
 const proxyquire = require('proxyquire');
-const {getMatrixUser, getRoomAlias, tagMatrixMessage, getTextContent, toMatrixFormat} = require('../../src/utils');
+const {getMatrixUser, getRoomAlias, tagMatrixMessage, getTextContent, toMatrixRoomFormat, toMatrixUserFormat} = require('../../src/utils');
 const {Bridge, Intent} = require('matrix-appservice-bridge');
 const log = require('../../src/modules/log')(module);
 
@@ -113,7 +113,7 @@ const usersCollection = {
         'avatar_url': 'url',
         'displayname': 'user',
     },
-    [getMatrixUser(toMatrixFormat(userBob.personId))]: {
+    [getMatrixUser(toMatrixUserFormat(userBob.personId))]: {
         'avatar_url': userBob.profile.avatarUrl,
         'displayname': userBob.displayName,
     },
@@ -189,7 +189,7 @@ describe('Matrix handler integ testing', () => {
         });
 
         it('Text message testing', async () => {
-            puppetStub.getRoomAliases.returns([getRoomAlias(toMatrixFormat(existRoom))]);
+            puppetStub.getRoomAliases.returns([getRoomAlias(toMatrixRoomFormat(existRoom))]);
             const getDisplayName = sender => `${sender}DisplayName`;
             getDisplayNameStub.callsFake(getDisplayName);
             await handleMatrixMessageEvent(textEventData);
@@ -224,7 +224,7 @@ describe('Matrix handler integ testing', () => {
         });
 
         it('command text message testing', async () => {
-            puppetStub.getRoomAliases.returns([getRoomAlias(toMatrixFormat(existRoom))]);
+            puppetStub.getRoomAliases.returns([getRoomAlias(toMatrixRoomFormat(existRoom))]);
             const getDisplayName = sender => `${sender}DisplayName`;
             getDisplayNameStub.callsFake(getDisplayName);
 
@@ -249,7 +249,7 @@ describe('Matrix handler integ testing', () => {
             const {room_id: matrixRoomId} = ghostEventData;
             getRoomNameStub.returns(skypeRoomName);
 
-            puppetStub.getRoomAliases.returns([getRoomAlias(toMatrixFormat(existRoom))]);
+            puppetStub.getRoomAliases.returns([getRoomAlias(toMatrixRoomFormat(existRoom))]);
 
             await handleMatrixMemberEvent(ghostEventData);
 
@@ -275,7 +275,7 @@ describe('Matrix handler integ testing', () => {
                 admins: [`8:${skypeClientMock.context.username}`]});
 
             expect(setRoomAliasStub).to.be.calledWithExactly(matrixRoomId,
-                getRoomAlias(toMatrixFormat(newSkypeConversation)));
+                getRoomAlias(toMatrixRoomFormat(newSkypeConversation)));
         });
     });
 

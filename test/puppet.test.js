@@ -3,39 +3,13 @@ const {stub} = require('sinon');
 const sinonChai = require('sinon-chai');
 const {expect} = chai;
 chai.use(sinonChai);
-const proxyquire = require('proxyquire');
 const config = require('../src/config.js');
 const {getMatrixUser} = require('../src/utils');
-const log = require('../src/modules/log')(module);
+const testConfig = require('./fixtures/config.json');
 
-const readlineStub = stub();
-const writeFileStub = stub();
-const createClientStub = stub();
-const debugStub = stub();
-const warnStub = stub();
-const errorStub = stub();
-const infoStub = stub();
+const Puppet = require('../src/puppet');
 
-const Puppet = proxyquire('../src/puppet',
-    {
-        'readline-sync': {
-            question: readlineStub,
-        },
-        'fs': {
-            writeFile: writeFileStub,
-        },
-        'matrix-js-sdk': {
-            createClient: createClientStub,
-        },
-        './modules/log': module => ({
-            debug: debugStub,
-            warn: warnStub,
-            error: errorStub,
-            info: infoStub,
-        }),
-    });
 const pathTotestConfig = './fixtures/config.json';
-
 
 const localpart = 'localpart';
 const password = 'password';
@@ -55,7 +29,7 @@ const rooms = [
     {roomId: 'matrixRoomId3'},
 ];
 
-const mockClient = {
+const client = {
     getRooms: () => rooms,
     getRoomIdForAlias: getRoomIdForAliasStub,
     joinRoom: joinRoomStub,
@@ -65,25 +39,28 @@ const mockClient = {
     },
 };
 
-const puppet = new Puppet(pathTotestConfig, mockClient);
+const readline = {
+    question: stub(),
+};
+const fs = {
+    writeFile: stub(),
+};
+const sdk = {
+    createClient: stub(),
+};
+
+const puppet = new Puppet({client, readline, fs, sdk, pathToConfig: pathTotestConfig, config: testConfig});
 
 describe('Puppet testing', () => {
-    beforeEach(() => {
-        debugStub.callsFake(log.debug);
-        warnStub.callsFake(log.warn);
-        errorStub.callsFake(log.error);
-        infoStub.callsFake(log.info);
-    });
-
     it('associate testing', async () => {
-        readlineStub.onCall(0).returns(localpart);
-        readlineStub.onCall(1).returns(password);
-        createClientStub.returns({loginWithPassword: stub().resolves({'access_token': token})});
-        writeFileStub.callsFake().resolves();
+        readline.question.onCall(0).returns(localpart);
+        readline.question.onCall(1).returns(password);
+        sdk.createClient.resolves({loginWithPassword: stub().resolves({'access_token': token})});
+        fs.writeFile.resolves();
 
         await puppet.associate();
         const expectedJson = JSON.stringify({
-            ...config,
+            ...testConfig,
             puppet: {
                 id,
                 localpart,
@@ -91,18 +68,18 @@ describe('Puppet testing', () => {
             },
         }, null, 2);
 
-        expect(createClientStub).to.be.calledWithExactly(config.bridge.homeserverUrl);
-        expect(writeFileStub).to.be.calledWithExactly(pathTotestConfig, expectedJson);
+        expect(sdk.createClient).to.be.calledWithExactly(config.bridge.homeserverUrl);
+        expect(fs.writeFile).to.be.calledWithExactly(pathTotestConfig, expectedJson);
     });
 
     it('getClient test', () => {
-        const client = puppet.getClient();
-        expect(client).to.be.deep.equal(mockClient);
+        const res = puppet.getClient();
+        expect(res).to.be.deep.equal(client);
     });
 
     it('getUserId test', () => {
-        const client = puppet.getUserId();
-        expect(client).to.be.deep.equal(mockClient.credentials.userId);
+        const res = puppet.getUserId();
+        expect(res).to.be.deep.equal(client.credentials.userId);
     });
 
     describe('Test getRoomAliases', () => {
@@ -164,21 +141,17 @@ describe('Puppet testing', () => {
     });
 
     describe('Test invite', () => {
-        const msg = 'All members in skype skypeRoom are already joined to Matrix room: ';
         beforeEach(() => {
             inviteStub.reset();
-            debugStub.reset();
         });
 
         it('Expect "invite" don\'t invite anyone if invitedUsers is not defined', async () => {
             await puppet.invite(matrixRoomId);
-            expect(debugStub).to.be.calledWithExactly(msg, matrixRoomId);
             expect(inviteStub).not.to.be.called;
         });
 
         it('Expect "invite" don\'t invite anyone if invitedUsers is empty array', async () => {
             await puppet.invite(matrixRoomId, []);
-            expect(debugStub).not.to.be.calledWith(msg);
             expect(inviteStub).not.to.be.called;
         });
 
@@ -191,7 +164,6 @@ describe('Puppet testing', () => {
             ];
 
             await puppet.invite(matrixRoomId, usersToInvite);
-            expect(debugStub).not.to.be.calledWith(msg);
             expect(inviteStub).to.be.calledWithExactly(matrixRoomId, usersToInvite[0]);
             expect(inviteStub).to.be.calledWithExactly(matrixRoomId, usersToInvite[1]);
             expect(inviteStub).to.be.calledWithExactly(matrixRoomId, usersToInvite[2]);

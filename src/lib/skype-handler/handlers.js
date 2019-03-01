@@ -3,7 +3,7 @@ const log = require('../../modules/log')(module);
 const skypeLib = require('../skype-lib/client');
 const {
     getBody,
-    toSkypeFormat,
+    toSkypeUserFormat,
     getRoomAlias,
     getServiceName: getRoomAliasName,
     getMatrixUser,
@@ -76,7 +76,7 @@ module.exports = state => {
 
             return ghostIntent.getClient();
         } catch (err) {
-            log.warn('Can\'t get Intent for user %s. Error: ', toSkypeFormat(senderId), err);
+            log.warn('Can\'t get Intent for user %s. Error: ', toSkypeUserFormat(senderId), err);
 
             return puppet.getClient();
         }

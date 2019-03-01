@@ -4,7 +4,9 @@ const {Cli, AppServiceRegistration} = require('matrix-appservice-bridge');
 
 const config = require('./config.json');
 const Puppet = require('./src/puppet');
-const puppet = new Puppet(path.join(__dirname, './config.json'));
+const pathToConfig = path.join(__dirname, './config.json');
+
+const puppet = new Puppet({pathToConfig, config});
 const app = require('./src');
 
 new Cli({
@@ -16,8 +18,8 @@ new Cli({
             reg.setAppServiceToken(AppServiceRegistration.generateToken());
             reg.setSenderLocalpart('skypebot');
             reg.addRegexPattern('users', '@skype_.*', true);
-            // originally in puppet reg.setId(AppServiceRegistration.generateToken());
-            reg.setId('skype');
+            reg.addRegexPattern('aliases', '#skupe_.*', true);
+            reg.setId(AppServiceRegistration.generateToken());
             callback(reg);
         }).catch(err => {
             log.error(err.message);
@@ -25,6 +27,6 @@ new Cli({
         });
     },
     run(port) {
-        return app();
+        return app(puppet);
     },
 }).run();

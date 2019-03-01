@@ -8,7 +8,7 @@ module.exports = async auth => {
     };
 
     try {
-        log.info('starting matrix client');
+        log.info('starting skype client');
         const api = await skypeHttp.connect(opts);
         await api.listen();
         log.info('setting status online');

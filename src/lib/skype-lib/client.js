@@ -10,8 +10,9 @@ const {
     getSkypeMatrixUsers,
     getMatrixRoomId,
     getBody,
-    toMatrixFormat,
-    toSkypeFormat,
+    toMatrixRoomFormat,
+    toMatrixUserFormat,
+    toSkypeRoomFormat,
     getAvatarUrl,
     getTextContent,
     getSkypeID,
@@ -30,7 +31,7 @@ module.exports = api => {
 
         const senderName = contact ? contact.displayName : native.imdisplayname;
         const avatarUrl = contact ? contact.profile.avatarUrl : getAvatarUrl(sender);
-        const senderId = toMatrixFormat(sender);
+        const senderId = toMatrixUserFormat(sender);
 
         return {senderName, avatarUrl, senderId};
     };
@@ -43,7 +44,7 @@ module.exports = api => {
         await api.setConversationTopic(skypeRoomId, roomName);
         log.debug('Skype room %s is made', skypeRoomId);
 
-        return toMatrixFormat(skypeRoomId);
+        return toMatrixRoomFormat(skypeRoomId);
     };
 
     const saveDataByUrl = async (url, path) => {
@@ -136,7 +137,7 @@ module.exports = api => {
 
         getSkypeRoomData: async id => {
             try {
-                const skypeConversation = await api.getConversation(toSkypeFormat(id));
+                const skypeConversation = await api.getConversation(toSkypeRoomFormat(id));
                 const topic = getSkypeConverstionType(skypeConversation.type);
                 const name = deskypeify(skypeConversation.threadProperties.topic) || topic;
                 log.debug('got skype room data', {name, topic});
