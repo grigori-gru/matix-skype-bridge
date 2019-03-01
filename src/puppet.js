@@ -1,16 +1,21 @@
 const matrixSdk = require('matrix-js-sdk');
-const fs = require('fs');
-const readline = require('readline-sync');
-const config = require('./config.js');
+const fsLib = require('fs').promises;
+const readlineLib = require('readline-sync');
 const log = require('./modules/log')(module);
 
 module.exports = class Puppet {
     /**
      *
-     * @param {string} pathToConfig path to config file
-     * @param {Object} client optionaly add matrix client, test only
+     * @param {Object} options puppet options
+     * @param {string} options.pathToConfig path to config file
+     * @param {Object} options.client optionaly add matrix client, test only
+     * @param {Object} options.config config to work
      */
-    constructor(pathToConfig, client) {
+    constructor({pathToConfig, client, config, readline = readlineLib, fs = fsLib, sdk = matrixSdk}) {
+        this.config = config;
+        this.sdk = sdk;
+        this.fs = fs;
+        this.readline = readline;
         this.pathToConfig = pathToConfig;
         this.client = client;
         this.matrixRoomMembers = {};
@@ -22,12 +27,11 @@ module.exports = class Puppet {
      * @returns {Promise} Returns a promise resolving the MatrixClient
      */
     async startClient() {
-        const _matrixClient = await matrixSdk.createClient({
-            baseUrl: config.bridge.homeserverUrl,
-            userId: config.puppet.id,
-            accessToken: config.puppet.token,
+        this.client = await this.sdk.createClient({
+            baseUrl: this.config.bridge.homeserverUrl,
+            userId: this.config.puppet.id,
+            accessToken: this.config.puppet.token,
         });
-        this.client = _matrixClient;
         this.client.startClient();
         return new Promise((resolve, _reject) => {
             this.matrixRoomMembers = {};
@@ -141,25 +145,31 @@ module.exports = class Puppet {
      * Method for creating puppet data and adding to config file
      */
     async associate() {
-        log.info([
-            'This bridge performs matrix user puppeting.',
-            'This means that the bridge logs in as your user and acts on your behalf',
-        ].join('\n'));
-        const localpart = readline.question('Enter your user\'s localpart\n');
-        const id = `@${localpart}:${config.bridge.domain}`;
-        const password = readline.question(`Enter password for ${id}\n`);
-        const matrixClient = matrixSdk.createClient(config.bridge.homeserverUrl);
-        const accessDat = await matrixClient.loginWithPassword(id, password);
-        log.info('log in success');
-        await fs.writeFile(this.pathToConfig, JSON.stringify({
-            ...config,
-            puppet: {
-                id,
-                localpart,
-                token: accessDat.access_token,
-            },
-        }, null, 2));
-        log.info(`Updated config file ${this.pathToConfig}`);
+        try {
+            log.info([
+                'This bridge performs matrix user puppeting.',
+                'This means that the bridge logs in as your user and acts on your behalf',
+            ].join('\n'));
+            const localpart = this.readline.question('Enter your user\'s localpart\n');
+            const id = `@${localpart}:${this.config.bridge.domain}`;
+            const password = this.readline.question(`Enter password for ${id}\n`, {hideEchoBack: true});
+
+            const matrixClient = await this.sdk.createClient(this.config.bridge.homeserverUrl);
+            const accessDat = await matrixClient.loginWithPassword(id, password);
+            log.info('log in success');
+            await this.fs.writeFile(this.pathToConfig, JSON.stringify({
+                ...this.config,
+                puppet: {
+                    id,
+                    localpart,
+                    token: accessDat.access_token,
+                },
+            }, null, 2));
+            log.info(`Updated config file ${this.pathToConfig}`);
+        } catch (error) {
+            log.error(error);
+            throw error;
+        }
     }
 
     /**

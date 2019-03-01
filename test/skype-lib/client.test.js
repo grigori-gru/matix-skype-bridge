@@ -10,7 +10,8 @@ const proxyquire = require('proxyquire');
 // const config = require('../../src/config.js');
 const {
     getMatrixUser,
-    toMatrixFormat,
+    toMatrixRoomFormat,
+    toMatrixUserFormat,
     getAvatarUrl,
     getTextContent,
     getBody,
@@ -117,7 +118,7 @@ describe('Client testing', () => {
                 'avatar_url': 'url',
                 'displayname': 'user',
             },
-            [getMatrixUser(toMatrixFormat(userBob.personId))]: {
+            [getMatrixUser(toMatrixUserFormat(userBob.personId))]: {
                 'avatar_url': userBob.profile.avatarUrl,
                 'displayname': userBob.displayName,
             },
@@ -137,7 +138,7 @@ describe('Client testing', () => {
                 users: [userBob.personId],
                 admins: [`8:${skypeApiMock.context.username}`]});
             expect(setConversationTopicStub).to.be.calledWithExactly(skypeConversation, matrixRoomName);
-            expect(result).to.be.equal(toMatrixFormat(skypeConversation));
+            expect(result).to.be.equal(toMatrixRoomFormat(skypeConversation));
         });
     });
 
@@ -147,7 +148,7 @@ describe('Client testing', () => {
             const expected = {
                 senderName: userAscend.displayName,
                 avatarUrl: userAscend.profile.avatarUrl,
-                senderId: toMatrixFormat(userAscend.personId),
+                senderId: toMatrixUserFormat(userAscend.personId),
             };
             expect(data).to.be.deep.equal(expected);
         });
@@ -157,7 +158,7 @@ describe('Client testing', () => {
             const expected = {
                 senderName: native.imdisplayname,
                 avatarUrl: getAvatarUrl(id),
-                senderId: toMatrixFormat(id),
+                senderId: toMatrixUserFormat(id),
             };
             expect(data).to.be.deep.equal(expected);
         });
@@ -166,7 +167,7 @@ describe('Client testing', () => {
             const data = await getUserData(id, native);
             const expected = {
                 senderName: native.imdisplayname,
-                senderId: toMatrixFormat(id),
+                senderId: toMatrixUserFormat(id),
                 // eslint-disable-next-line
                 avatarUrl: undefined,
             };
@@ -205,7 +206,7 @@ describe('Client testing', () => {
         it('expect getSkypeRoomData returns the same name and topic if no topic has no conversation', async () => {
             const [conversation] = skypeApiMock.conversations;
             const roomId = conversation.id;
-            const testRoomId = toMatrixFormat(roomId);
+            const testRoomId = toMatrixRoomFormat(roomId);
             getConversationStub.callsFake().resolves(conversation);
 
             const result = await getSkypeRoomData(testRoomId);
@@ -221,7 +222,7 @@ describe('Client testing', () => {
             const topic = skypeify('test topic');
             const conversation = {...skypeApiMock.conversations[0], threadProperties: {topic}};
             const roomId = conversation.id;
-            const testRoomId = toMatrixFormat(roomId);
+            const testRoomId = toMatrixRoomFormat(roomId);
             getConversationStub.callsFake().resolves(conversation);
 
             const result = await getSkypeRoomData(testRoomId);
@@ -237,7 +238,7 @@ describe('Client testing', () => {
             const topic = skypeify('test topic');
             const conversation = {...skypeApiMock.conversations[0], threadProperties: {topic}};
             const roomId = conversation.id;
-            const testRoomId = toMatrixFormat(roomId);
+            const testRoomId = toMatrixRoomFormat(roomId);
             getConversationStub.callsFake().throws();
             try {
                 await getSkypeRoomData(testRoomId);
@@ -249,7 +250,7 @@ describe('Client testing', () => {
     });
 
     // it('expect sendDocToSkype to send image and not to have data in config.tmp dir', async () => {
-    //     const id = toMatrixFormat('8:live:abcd');
+    //     const id = toMatrixUserFormat('8:live:abcd');
     //     const data = {
     //         text: 'text',
     //         url: 'http://testUrl',
@@ -260,7 +261,7 @@ describe('Client testing', () => {
     //     const expectedMessage = {
     //         name: data.text,
     //     };
-    //     const expectedConversationId = toSkypeFormat(id);
+    //     const expectedConversationId = toSkypeRoomFormat(id);
     //     expect(writeFileStub).not.to.be.called;
     //     expect(sendImageStub).to.be.calledWithExactly(expectedMessage, expectedConversationId);
     // });

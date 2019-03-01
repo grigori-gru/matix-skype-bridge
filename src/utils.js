@@ -5,6 +5,7 @@ const fetch = require('node-fetch');
 const querystring = require('querystring');
 const {AllHtmlEntities: Entities} = require('html-entities');
 const entities = new Entities();
+const {encode, decode} = require('base32');
 
 const log = require('./modules/log')(module);
 const {deskypeify} = require('./lib/skype-lib/skypeify');
@@ -88,21 +89,35 @@ const getNameFromSkypeId = name => {
     return name.replace(sum(prefix, delim), '');
 };
 
-const toMatrixFormat = str => {
+const toMatrixUserFormat = str => {
+    if (str) {
+        return encode(str);
+    }
+    log.warn('unexpected data for decode');
+};
+
+const toMatrixRoomFormat = str => {
     if (str) {
         return Buffer.from(str).toString('base64');
     }
     log.warn('unexpected data for decode');
 };
 
-const toSkypeFormat = str => {
+const toSkypeRoomFormat = str => {
     if (str) {
         return Buffer.from(str, 'base64').toString('ascii');
     }
     log.warn('unexpected data for decode');
 };
 
-const getMatrixRoomId = conversation => toMatrixFormat(conversation).replace(delim, '^');
+const toSkypeUserFormat = str => {
+    if (str) {
+        return decode(str);
+    }
+    log.warn('unexpected data for decode');
+};
+
+const getMatrixRoomId = conversation => toMatrixRoomFormat(conversation).replace(delim, '^');
 
 // const getImgLink = (fileName, uri) =>
 //     `[Image] (${fileName}) ${uri}`;
@@ -131,9 +146,9 @@ const getIdFromMatrix = (user, prefix = '', matrixTag = matrixUserTag) => {
     return result;
 };
 
-const getUserId = (user = '', tag = matrixUserTag) =>
+const getUserId = (user = '', tag = matrixUserTag, func = toSkypeUserFormat) =>
     (user.includes(servicePrefix) ?
-        toSkypeFormat(getIdFromMatrix(user, servicePrefix, tag)) :
+        func(getIdFromMatrix(user, servicePrefix, tag)) :
         getSkypeID(getIdFromMatrix(user)));
 
 const getSkypeMatrixUsers = (skypeCollection = [], matrixRoomUsers) => {
@@ -148,7 +163,7 @@ const getTextContent = (name, text) => sum(name, delim, '\n', text);
 
 
 const getSkypeRoomFromAliases = aliases =>
-    (aliases ? getUserId(aliases.find(isMatrixAlias), matrixRoomTag) : aliases);
+    (aliases ? getUserId(aliases.find(isMatrixAlias), matrixRoomTag, toSkypeRoomFormat) : aliases);
 
 const getBody = (content, senderId) => ({
     body: tag(content, senderId),
@@ -264,8 +279,10 @@ module.exports = {
     getSkypeID,
     getMatrixRoomId,
     getNameFromSkypeId,
-    toMatrixFormat,
-    toSkypeFormat,
+    toMatrixUserFormat,
+    toMatrixRoomFormat,
+    toSkypeRoomFormat,
+    toSkypeUserFormat,
     getIdFromMatrix,
     getUserId,
     getSkypeMatrixUsers,

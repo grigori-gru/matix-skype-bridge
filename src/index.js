@@ -1,19 +1,17 @@
 const {Bridge} = require('matrix-appservice-bridge');
-const path = require('path');
 
 const log = require('./modules/log')(module);
 const config = require('./config');
 const {skypeEventHandler, skypeErrorHandler} = require('./lib/skype-handler');
 const matrixEventHandler = require('./lib/matrix-handler');
 const skypeConnect = require('./lib/skype-lib/connect');
-const Puppet = require('./puppet');
 
-const puppet = new Puppet(path.join(__dirname, './config.json'));
-
-module.exports = async function app() {
+module.exports = async function app(puppet) {
     log.info('starting matrix client');
     await puppet.startClient();
+    log.info('matrix client started!!!');
     this.skypeClient = await skypeConnect(config.skype);
+    log.info('skype client started!!!');
 
     const handleMatrixEvent = data =>
         matrixEventHandler({puppet, skypeClient: this.skypeClient, bridge: this.bridge})(data);

@@ -1,6 +1,6 @@
 {
     "name": "matrix-skype-bridge",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "description": "Matrix<->Skype user-puppeting portal",
     "main": "index.js",
     "scripts": {
@@ -30,30 +30,31 @@
         "test"
     ],
     "dependencies": {
+        "base32": "0.0.6",
         "html-entities": "1.2.1",
         "html-to-text": "^4.0.0",
-        "matrix-appservice-bridge": "1.4.0",
-        "mime-types": "2.1.18",
-        "node-fetch": "2.1.2",
+        "matrix-appservice-bridge": "1.7.0",
+        "mime-types": "2.1.22",
+        "node-fetch": "2.3.0",
         "readline-sync": "1.4.9",
         "skype-http": "0.0.15",
         "striptags": "3.1.1",
-        "tmp-promise": "1.0.4",
+        "tmp-promise": "1.0.5",
         "winston": "2.4.2",
         "winston-daily-rotate-file": "3.2.1"
     },
     "devDependencies": {
-        "chai": "4.1.2",
-        "chai-http": "4.0.0",
-        "eslint": "4.19.1",
-        "eslint-config-google": "0.9.1",
+        "chai": "4.2.0",
+        "chai-http": "4.2.1",
+        "eslint": "5.14.1",
+        "eslint-config-google": "0.12.0",
         "eslint-plugin-chai-friendly": "0.4.1",
-        "mocha": "5.2.0",
-        "nock": "9.2.6",
-        "nyc": "11.8.0",
+        "mocha": "6.0.2",
+        "nock": "10.0.6",
+        "nyc": "^13.3.0",
         "pre-commit": "1.2.2",
-        "proxyquire": "2.0.1",
-        "sinon": "5.0.7",
-        "sinon-chai": "3.1.0"
+        "proxyquire": "2.1.0",
+        "sinon": "7.2.5",
+        "sinon-chai": "3.3.0"
     }
 }
