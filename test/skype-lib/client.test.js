@@ -11,7 +11,6 @@ const proxyquire = require('proxyquire');
 const {
     getMatrixUser,
     toMatrixFormat,
-    getNameFromSkypeId,
     getAvatarUrl,
     getTextContent,
     getBody,
@@ -95,6 +94,8 @@ const {
     },
 } = skypeLib(skypeApiMock);
 
+const {native} = messageEvent.resource;
+
 describe('Client testing', () => {
     it('expect getContact return correct id', async () => {
         const contact = await getContact(userIvan.personId);
@@ -152,9 +153,9 @@ describe('Client testing', () => {
         });
         it('expect getUserData returns tail of senderName and avatarUrl from skype if it\'s not in contacts of skypeBot', async () => {
             const id = '8:live:testUser';
-            const data = await getUserData(id);
+            const data = await getUserData(id, native);
             const expected = {
-                senderName: getNameFromSkypeId(id),
+                senderName: native.imdisplayname,
                 avatarUrl: getAvatarUrl(id),
                 senderId: toMatrixFormat(id),
             };
@@ -162,9 +163,9 @@ describe('Client testing', () => {
         });
         it('expect getUserData returns senderId as senderName user is not from Skype', async () => {
             const id = 'matrix_user';
-            const data = await getUserData(id);
+            const data = await getUserData(id, native);
             const expected = {
-                senderName: id,
+                senderName: native.imdisplayname,
                 senderId: toMatrixFormat(id),
                 // eslint-disable-next-line
                 avatarUrl: undefined,
@@ -177,7 +178,7 @@ describe('Client testing', () => {
         it('expect getPayload returns correct from message event', async () => {
             const data = messageEvent.resource;
             const result = await getPayload(data);
-            const userData = await getUserData(data.from.raw);
+            const userData = await getUserData(data.from.raw, native);
             const expected = {
                 roomId: getMatrixRoomId(data.conversation),
                 userData,
@@ -188,7 +189,7 @@ describe('Client testing', () => {
         it('expect getPayload returns correct from image event', async () => {
             const data = imageEvent.resource;
             const result = await getPayload(data);
-            const userData = await getUserData(data.from.raw);
+            const userData = await getUserData(data.from.raw, native);
 
             const expected = {
                 roomId: getMatrixRoomId(data.conversation),

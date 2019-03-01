@@ -13,7 +13,6 @@ const {
     toMatrixFormat,
     toSkypeFormat,
     getAvatarUrl,
-    getNameFromSkypeId,
     getTextContent,
     getSkypeID,
 } = require('../../utils');
@@ -26,10 +25,10 @@ module.exports = api => {
             (contact.personId === id || contact.mri === id));
     };
 
-    const getUserData = async sender => {
+    const getUserData = async (sender, native) => {
         const contact = await getContact(sender);
 
-        const senderName = contact ? contact.displayName : getNameFromSkypeId(sender);
+        const senderName = contact ? contact.displayName : native.imdisplayname;
         const avatarUrl = contact ? contact.profile.avatarUrl : getAvatarUrl(sender);
         const senderId = toMatrixFormat(sender);
 
@@ -127,8 +126,8 @@ module.exports = api => {
         },
 
 
-        getPayload: async ({content, conversation, from: {raw: sender}, original_file_name: fileName}) => {
-            const userData = sender ? await getUserData(sender) : {};
+        getPayload: async ({content, conversation, from: {raw: sender}, original_file_name: fileName, native}) => {
+            const userData = sender ? await getUserData(sender, native) : {};
             const roomId = getMatrixRoomId(conversation);
             const body = getBody(content || fileName, userData.senderId);
 
